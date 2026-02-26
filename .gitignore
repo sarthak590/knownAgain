@@ -1,4 +1,24 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
 .env
+venv/
+knownAgain_env/
+
+# Environment variables
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Face data (VERY IMPORTANT)
 models/encodings.pkl
+
+# IDE
+.idea/
+.vscode/

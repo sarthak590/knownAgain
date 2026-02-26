@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>knownAgain Demo</title>
+</head>
+<body>
+
+<h2>knownAgain Live Demo</h2>
+
+<div style="position: relative; width: 400px;">
+    <video id="video" width="400" autoplay playsinline></video>
+    <canvas id="canvas" style="position:absolute; top:0; left:0;"></canvas>
+</div>
+
+<h3 id="status">Waiting...</h3>
+
+<div id="info" style="white-space: pre-wrap; margin-top:10px;"></div>
+
+<div id="subtitle"
+     style="margin-top:15px;font-size:18px;min-height:40px;font-weight:500;white-space: pre-wrap;">
+</div>
+
+<!-- Registration Panel -->
+<div id="registerPanel" style="display:none; margin-top:15px;">
+    <h4>New Person Detected</h4>
+    <input type="text" id="newName" placeholder="Enter Name">
+    <input type="text" id="newRelation" placeholder="Enter Relationship">
+    <button id="saveNew">Save Person</button>
+</div>
+
+<!-- Record Button -->
+<button id="recordBtn" style="margin-top:15px; display:none;">
+    Record Conversation
+</button>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const statusText = document.getElementById('status');
+const infoBox = document.getElementById("info");
+const subtitleBox = document.getElementById("subtitle");
+
+const registerPanel = document.getElementById("registerPanel");
+const saveNewBtn = document.getElementById("saveNew");
+const recordBtn = document.getElementById("recordBtn");
+
+let activeVisitor = null;
+let activeUnknownId = null;
+let lastDisplayedTranscript = null;
+let isTyping = false;
+
+/* ---------------- CAMERA ---------------- */
+
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => video.srcObject = stream)
+    .catch(err => console.error(err));
+
+video.onloadedmetadata = () => {
+    canvas.width = video.clientWidth;
+    canvas.height = video.clientHeight;
+};
+
+function captureAndSend() {
+    if (!video.videoWidth) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('image', blob, 'snapshot.jpg');
+
+        fetch('/recognize', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => handleResponse(data));
+    }, 'image/jpeg');
+}
+
+setInterval(captureAndSend, 400);
+
+/* ---------------- TYPEWRITER ---------------- */
+
+function typeWriter(text) {
+    if (isTyping) return;
+    isTyping = true;
+
+    subtitleBox.innerText = "";
+    let i = 0;
+
+    function typing() {
+        if (i < text.length) {
+            subtitleBox.innerText += text[i];
+            i++;
+            setTimeout(typing, 30);
+        } else {
+            isTyping = false;
+        }
+    }
+
+    typing();
+}
+
+/* ---------------- HANDLE RESPONSE ---------------- */
+
+function handleResponse(data) {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (data.status !== "faces_detected") return;
+
+    activeVisitor = null;
+    activeUnknownId = null;
+
+    data.faces.forEach(face => {
+
+        const scaleX = canvas.width / video.videoWidth;
+        const scaleY = canvas.height / video.videoHeight;
+
+        const x = face.box.left * scaleX;
+        const y = face.box.top * scaleY;
+        const width = (face.box.right - face.box.left) * scaleX;
+        const height = (face.box.bottom - face.box.top) * scaleY;
+
+        // Patient
+        if (face.is_patient) {
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, width, height);
+            ctx.fillStyle = "blue";
+            ctx.fillText("Patient", x, y - 10);
+            return;
+        }
+
+        // Unknown
+        if (face.is_new_candidate) {
+            ctx.strokeStyle = "orange";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, width, height);
+            ctx.fillStyle = "orange";
+            ctx.fillText("Unknown", x, y - 10);
+
+            activeUnknownId = face.unknown_id;
+            registerPanel.style.display = "block";
+            return;
+        }
+
+        // Visitor
+        ctx.strokeStyle = "lime";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x, y, width, height);
+        ctx.fillStyle = "lime";
+        ctx.fillText(face.name + " (" + face.confidence + "%)", x, y - 10);
+
+        activeVisitor = face;
+    });
+
+    if (!activeUnknownId) {
+        registerPanel.style.display = "none";
+    }
+
+    if (activeVisitor) {
+
+        statusText.innerText = "Visitor Recognized";
+
+        infoBox.innerText =
+            "Name: " + activeVisitor.name +
+            "\nRelationship: " + activeVisitor.relationship +
+            "\nLast seen: " + activeVisitor.last_seen +
+            "\nTotal conversations: " + (activeVisitor.conversation_count || 0) +
+            "\nLast conversation date: " + (activeVisitor.last_date || "None");
+
+        recordBtn.style.display = "block";
+
+        if (activeVisitor.last_topic &&
+            activeVisitor.last_topic !== lastDisplayedTranscript) {
+
+            typeWriter(
+                activeVisitor.last_date
+                    ? "On " + activeVisitor.last_date +
+                      ", you talked about: " + activeVisitor.last_topic
+                    : "No previous conversations recorded."
+            );
+
+            lastDisplayedTranscript = activeVisitor.last_topic;
+        }
+
+    } else {
+        recordBtn.style.display = "none";
+        infoBox.innerText = "";
+        subtitleBox.innerText = "";
+        lastDisplayedTranscript = null;
+        statusText.innerText = "Waiting...";
+    }
+}
+
+/* ---------------- REGISTER NEW ---------------- */
+
+saveNewBtn.onclick = () => {
+
+    const name = document.getElementById("newName").value;
+    const relationship = document.getElementById("newRelation").value;
+
+    if (!name || !relationship || !activeUnknownId) return;
+
+    fetch('/register-new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            unknown_id: activeUnknownId,
+            name: name,
+            relationship: relationship
+        })
+    }).then(() => {
+        registerPanel.style.display = "none";
+        document.getElementById("newName").value = "";
+        document.getElementById("newRelation").value = "";
+    });
+};
+
+//* ---------------- RECORD AUDIO ---------------- */
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+    console.log("Speech recognition not supported in this browser.");
+} else {
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recordBtn.onclick = () => {
+
+        if (!activeVisitor) return;
+
+        recordBtn.innerText = "Listening...";
+        recognition.start();
+    };
+
+    recognition.onresult = function(event) {
+
+        if (!activeVisitor) return;
+
+        let finalTranscript = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+            finalTranscript += event.results[i][0].transcript + " ";
+        }
+
+        finalTranscript = finalTranscript.trim();
+
+        recognition.stop();  // 🔥 important
+
+        fetch('/add-note', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: activeVisitor.name,
+                note: finalTranscript
+            })
+        });
+
+        recordBtn.innerText = "Record Conversation";
+    };
+
+    recognition.onend = function() {
+        recordBtn.innerText = "Record Conversation";
+    };
+
+    recognition.onerror = function(event) {
+        console.log("Speech error:", event.error);
+        recordBtn.innerText = "Record Conversation";
+    };
+}
+</script>
+
+</body>
+</html>
