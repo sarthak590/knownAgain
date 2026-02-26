@@ -20,6 +20,31 @@
      style="margin-top:15px;font-size:18px;min-height:40px;font-weight:500;white-space: pre-wrap;">
 </div>
 
+<!-- Timeline Panel -->
+<div id="timelinePanel" style="margin-top:20px; display:none;">
+    <h4>Recent Conversations</h4>
+    <div id="timelineList"
+         style="border:1px solid #ccc;
+                padding:10px;
+                max-height:200px;
+                overflow-y:auto;
+                font-size:14px;
+                background:#f9f9f9;">
+    </div>
+</div>
+
+<!-- Memory Intelligence Panel -->
+<div id="memoryPanel" style="margin-top:15px; display:none;">
+    <h4>Memory Insight</h4>
+    <div id="memoryContent"
+         style="border:1px solid #bbb;
+                padding:10px;
+                background:#f0f8ff;
+                font-size:14px;">
+    </div>
+</div>
+
+<!-- Registration Panel -->
 <div id="registerPanel" style="display:none; margin-top:15px;">
     <h4>New Person Detected</h4>
     <input type="text" id="newName" placeholder="Enter Name">
@@ -32,6 +57,9 @@
 </button>
 
 <script>
+
+/* ---------------- DOM ---------------- */
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -39,14 +67,26 @@ const ctx = canvas.getContext('2d');
 const statusText = document.getElementById('status');
 const infoBox = document.getElementById("info");
 const subtitleBox = document.getElementById("subtitle");
+
 const registerPanel = document.getElementById("registerPanel");
 const saveNewBtn = document.getElementById("saveNew");
 const recordBtn = document.getElementById("recordBtn");
+
+const timelinePanel = document.getElementById("timelinePanel");
+const timelineList = document.getElementById("timelineList");
+
+const memoryPanel = document.getElementById("memoryPanel");
+const memoryContent = document.getElementById("memoryContent");
 
 let activeVisitor = null;
 let activeUnknownId = null;
 let lastDisplayedTranscript = null;
 let isTyping = false;
+
+/* ---------------- STABILITY BUFFER ---------------- */
+
+let faceStability = {};
+const REQUIRED_STABLE_FRAMES = 3;
 
 /* ---------------- CAMERA ---------------- */
 
@@ -55,21 +95,17 @@ navigator.mediaDevices.getUserMedia({ video: true })
     .catch(err => console.error(err));
 
 video.onloadedmetadata = () => {
-
-    // Make canvas match video display size
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
     canvas.style.width = video.clientWidth + "px";
     canvas.style.height = video.clientHeight + "px";
 };
 
-/* ---------------- SEND FRAME TO BACKEND ---------------- */
+/* ---------------- SEND FRAME ---------------- */
 
 function captureAndSend() {
     if (!video.videoWidth) return;
 
-    // Create temporary canvas for sending image
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = video.videoWidth;
     tempCanvas.height = video.videoHeight;
@@ -97,7 +133,6 @@ setInterval(captureAndSend, 400);
 function typeWriter(text) {
     if (isTyping) return;
     isTyping = true;
-
     subtitleBox.innerText = "";
     let i = 0;
 
@@ -110,11 +145,10 @@ function typeWriter(text) {
             isTyping = false;
         }
     }
-
     typing();
 }
 
-/* ---------------- DRAW CENTERED BOX ---------------- */
+/* ---------------- DRAW BOX ---------------- */
 
 function drawCenteredBox(face, color, label) {
 
@@ -128,14 +162,11 @@ function drawCenteredBox(face, color, label) {
 
     const centerX = x + width / 2;
     const centerY = y + height / 2;
-
     const boxSize = Math.max(width, height) * 1.3;
 
     const newX = centerX - boxSize / 2;
     const newY = centerY - boxSize / 2;
 
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
     ctx.strokeStyle = color;
     ctx.lineWidth = 4;
     ctx.strokeRect(newX, newY, boxSize, boxSize);
@@ -145,19 +176,125 @@ function drawCenteredBox(face, color, label) {
     ctx.fillText(label, newX, newY - 10);
 }
 
+/* ---------------- TIMELINE ---------------- */
+
+function renderTimeline(history) {
+
+    if (!history || history.length === 0) {
+        timelinePanel.style.display = "none";
+        return;
+    }
+
+    timelinePanel.style.display = "block";
+    timelineList.innerHTML = "";
+
+    history.slice().reverse().forEach((entry, index) => {
+
+        const container = document.createElement("div");
+        container.style.marginBottom = "10px";
+        container.style.paddingBottom = "8px";
+        container.style.borderBottom = "1px solid #ddd";
+
+        // Unique ID for collapsible transcript
+        const transcriptId = "transcript_" + index;
+
+        container.innerHTML = `
+            <strong>${entry.date}</strong><br>
+            <em>${entry.summary}</em><br><br>
+
+            <button onclick="toggleTranscript('${transcriptId}')"
+                    style="font-size:12px; margin-bottom:5px;">
+                Show Transcript
+            </button>
+
+            <div id="${transcriptId}"
+                 style="display:none; font-size:13px; background:#f3f3f3; padding:6px; margin-top:5px;">
+                ${entry.raw}
+            </div>
+
+            <div style="margin-top:5px; font-size:12px; color:#555;">
+                <strong>Keywords:</strong> ${(entry.keywords || []).join(", ")}
+            </div>
+        `;
+
+        timelineList.appendChild(container);
+    });
+}
+function toggleTranscript(id) {
+
+    const element = document.getElementById(id);
+
+    if (element.style.display === "none") {
+        element.style.display = "block";
+    } else {
+        element.style.display = "none";
+    }
+}
+/* ---------------- MEMORY PANEL ---------------- */
+
+function renderMemoryInsight(visitor) {
+
+    if (!visitor.memory_insight &&
+        (!visitor.top_keywords || visitor.top_keywords.length === 0)) {
+
+        memoryPanel.style.display = "none";
+        return;
+    }
+
+    memoryPanel.style.display = "block";
+
+    let content = "";
+
+    if (visitor.memory_insight) {
+        content += "<strong>Pattern Insight:</strong><br>" +
+                   visitor.memory_insight + "<br><br>";
+    }
+
+    if (visitor.memory_confidence !== undefined) {
+        content += "<strong>Memory Confidence:</strong> " +
+                   visitor.memory_confidence + "%<br><br>";
+    }
+
+    if (visitor.top_keywords && visitor.top_keywords.length > 0) {
+        content += "<strong>Frequent Topics:</strong><br>" +
+                   visitor.top_keywords.join(", ");
+    }
+
+    memoryContent.innerHTML = content;
+}
+
 /* ---------------- HANDLE RESPONSE ---------------- */
 
 function handleResponse(data) {
 
-    // Clear only overlay
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (data.status !== "faces_detected") return;
+
+    let currentFrameKeys = [];
+
+    data.faces.forEach(face => {
+        const key = face.name + "_" + (face.is_new_candidate ? "unknown" : "known");
+        currentFrameKeys.push(key);
+
+        if (!faceStability[key]) faceStability[key] = 0;
+        faceStability[key]++;
+    });
+
+    Object.keys(faceStability).forEach(key => {
+        if (!currentFrameKeys.includes(key)) {
+            faceStability[key]--;
+            if (faceStability[key] <= 0) delete faceStability[key];
+        }
+    });
 
     activeVisitor = null;
     activeUnknownId = null;
 
     data.faces.forEach(face => {
+
+        const key = face.name + "_" + (face.is_new_candidate ? "unknown" : "known");
+        if (faceStability[key] < REQUIRED_STABLE_FRAMES) return;
 
         if (face.is_patient) {
             drawCenteredBox(face, "blue", "Patient");
@@ -171,18 +308,11 @@ function handleResponse(data) {
             return;
         }
 
-        drawCenteredBox(
-            face,
-            "lime",
-            face.name + " (" + face.confidence + "%)"
-        );
-
+        drawCenteredBox(face, "lime", face.name + " (" + face.confidence + "%)");
         activeVisitor = face;
     });
 
-    if (!activeUnknownId) {
-        registerPanel.style.display = "none";
-    }
+    if (!activeUnknownId) registerPanel.style.display = "none";
 
     if (activeVisitor) {
 
@@ -210,16 +340,23 @@ function handleResponse(data) {
             lastDisplayedTranscript = activeVisitor.last_topic;
         }
 
+        renderTimeline(activeVisitor.recent_history);
+        renderMemoryInsight(activeVisitor);
+
     } else {
+
         recordBtn.style.display = "none";
         infoBox.innerText = "";
         subtitleBox.innerText = "";
+        timelinePanel.style.display = "none";
+        timelineList.innerHTML = "";
+        memoryPanel.style.display = "none";
         lastDisplayedTranscript = null;
         statusText.innerText = "Waiting...";
     }
 }
 
-/* ---------------- REGISTER NEW ---------------- */
+/* ---------------- REGISTER ---------------- */
 
 saveNewBtn.onclick = () => {
 
@@ -294,6 +431,7 @@ if (SpeechRecognition) {
         recordBtn.innerText = "Record Conversation";
     };
 }
+
 </script>
 </body>
 </html>

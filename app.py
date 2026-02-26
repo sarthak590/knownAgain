@@ -1,44 +1,95 @@
 from flask import Flask, request, jsonify, render_template
 from face_engine import recognize_face, register_new_face
 import pickle
-import re
 from datetime import datetime
+import re
+from collections import Counter
 
 app = Flask(__name__)
 
 ENCODINGS_FILE = "models/encodings.pkl"
 
+# ---------------------------------------------------
+# 🔵 STOPWORDS (Lightweight NLP)
+# ---------------------------------------------------
+
+STOPWORDS = {
+    "the","is","and","a","an","to","in","of","for","on","with",
+    "we","i","you","it","that","this","about","were","was","are",
+    "am","be","been","have","has","had","do","did","will","would",
+    "my","our","your","they","them","their","but","or"
+}
 
 # ---------------------------------------------------
-# 🔵 Lightweight Keyword Summary Generator
+# 🔵 KEYWORD + SUMMARY GENERATOR
 # ---------------------------------------------------
 
-def generate_summary(text):
-    stopwords = {
-        "i","me","my","we","our","you","your",
-        "is","are","was","were","the","a","an",
-        "and","or","but","to","of","in","on",
-        "for","with","about","that","this","it",
-        "have","had","has","will","would","could",
-        "should","they","them","their"
-    }
+def generate_summary_and_keywords(text):
 
-    words = re.findall(r'\b[a-zA-Z]{4,}\b', text.lower())
+    text_clean = re.sub(r'[^a-zA-Z0-9\s]', '', text.lower())
+    words = text_clean.split()
 
-    keywords = [w for w in words if w not in stopwords]
+    meaningful = [w for w in words if w not in STOPWORDS and len(w) > 3]
 
-    unique_keywords = list(dict.fromkeys(keywords))
+    freq = Counter(meaningful)
 
-    top_keywords = unique_keywords[:3]
+    # Top 5 keywords
+    keywords = [word for word, _ in freq.most_common(5)]
 
-    if not top_keywords:
-        return "Had a general conversation."
+    # Short summary (first 6 meaningful words)
+    summary_words = meaningful[:6]
 
-    return "Discussed " + ", ".join(top_keywords) + "."
+    if not summary_words:
+        summary = "Had a general conversation."
+    else:
+        summary = "Discussed " + " ".join(summary_words[:4]) + "."
+
+    return summary, keywords
 
 
 # ---------------------------------------------------
-# 🔵 Routes
+# 🔵 MEMORY INTELLIGENCE LAYER
+# ---------------------------------------------------
+
+def generate_memory_insight(history):
+
+    if len(history) < 2:
+        return None
+
+    # Combine last 3 summaries
+    recent = history[-3:]
+    combined_text = " ".join([h["summary"] for h in recent])
+
+    words = re.findall(r'\b[a-zA-Z]{4,}\b', combined_text.lower())
+    meaningful = [w for w in words if w not in STOPWORDS]
+
+    freq = Counter(meaningful)
+    top = [word for word, _ in freq.most_common(3)]
+
+    if not top:
+        return None
+
+    return f"You frequently discuss {', '.join(top)}."
+
+
+def calculate_memory_confidence(history):
+    if not history:
+        return 0
+    return min(100, 50 + len(history) * 10)
+
+
+def extract_top_keywords_from_history(history, limit=5):
+
+    all_keywords = []
+    for h in history[-5:]:
+        all_keywords.extend(h.get("keywords", []))
+
+    freq = Counter(all_keywords)
+    return [word for word, _ in freq.most_common(limit)]
+
+
+# ---------------------------------------------------
+# 🔵 ROUTES
 # ---------------------------------------------------
 
 @app.route('/')
@@ -58,7 +109,7 @@ def recognize():
 
 
 # ---------------------------------------------------
-# 🔵 Save Conversation Note
+# 🔵 Save Conversation Note (INTELLIGENT VERSION)
 # ---------------------------------------------------
 
 @app.route('/add-note', methods=['POST'])
@@ -80,25 +131,34 @@ def add_note():
 
         person_found = False
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        summary = generate_summary(note)
+
+        summary, keywords = generate_summary_and_keywords(note)
 
         for person in people:
             if person["name"] == name:
 
-                # Initialize history if not exists
                 if "history" not in person:
                     person["history"] = []
 
+                # Append structured conversation
                 person["history"].append({
                     "date": current_time,
-                    "transcript": note,
-                    "summary": summary
+                    "raw": note,
+                    "summary": summary,
+                    "keywords": keywords
                 })
 
+                history = person["history"]
+
                 # Update metadata
-                person["conversation_count"] = len(person["history"])
                 person["last_topic"] = summary
                 person["last_date"] = current_time
+                person["conversation_count"] = len(history)
+
+                # 🔥 Intelligence Layer
+                person["memory_insight"] = generate_memory_insight(history)
+                person["memory_confidence"] = calculate_memory_confidence(history)
+                person["top_keywords"] = extract_top_keywords_from_history(history)
 
                 person_found = True
                 break

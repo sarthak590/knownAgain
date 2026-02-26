@@ -7,7 +7,7 @@ from datetime import datetime
 
 ENCODINGS_FILE = "models/encodings.pkl"
 
-# Temporary memory for new faces (NOT saved permanently yet)
+# Temporary memory for new faces
 temporary_unknowns = {}
 
 
@@ -25,13 +25,11 @@ def recognize_face(image_file):
     except Exception as e:
         return {"status": "invalid_image_exception", "error": str(e)}
 
-    # Detect faces
     face_locations = face_recognition.face_locations(image)
 
     if not face_locations:
         return {"status": "no_face"}
 
-    # Load known encodings
     if not os.path.exists(ENCODINGS_FILE):
         return {"status": "no_registered_faces"}
 
@@ -42,8 +40,6 @@ def recognize_face(image_file):
         return {"status": "no_registered_faces"}
 
     known_encodings = [person["encoding"] for person in known_data]
-
-    # Encode detected faces
     face_encodings = face_recognition.face_encodings(image, face_locations)
 
     faces_output = []
@@ -63,7 +59,7 @@ def recognize_face(image_file):
         distance = distances[best_match_index]
         confidence = round((1 - distance) * 100, 2)
 
-        # 🔴 Unknown Face
+        # 🔴 UNKNOWN FACE
         if confidence < 60:
 
             unknown_id = f"unknown_{i}"
@@ -85,11 +81,12 @@ def recognize_face(image_file):
             })
             continue
 
-        # ✅ Recognized Face
+        # ✅ RECOGNIZED FACE
         person = known_data[best_match_index]
-        person["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 🔵 Structured Memory (history-based)
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        person["last_seen"] = current_time
+
         history = person.get("history", [])
         latest_memory = history[-1] if history else None
 
@@ -98,10 +95,14 @@ def recognize_face(image_file):
             "relationship": person.get("relationship"),
             "confidence": confidence,
             "is_patient": person.get("is_patient", False),
-            "last_seen": person.get("last_seen"),
+            "last_seen": current_time,
             "last_topic": latest_memory["summary"] if latest_memory else None,
             "last_date": latest_memory["date"] if latest_memory else None,
             "conversation_count": len(history),
+            "recent_history": history[-5:],  # last 5 conversations
+            "memory_insight": person.get("memory_insight"),
+            "memory_confidence": person.get("memory_confidence", 0),
+            "top_keywords": person.get("top_keywords", []),
             "is_new_candidate": False,
             "box": {
                 "top": expanded_top,
@@ -111,7 +112,6 @@ def recognize_face(image_file):
             }
         })
 
-    # Save updated last_seen values
     with open(ENCODINGS_FILE, "wb") as f:
         pickle.dump(known_data, f)
 
@@ -121,7 +121,7 @@ def recognize_face(image_file):
     }
 
 
-# 🔵 Register new face from temporary memory
+# 🔵 REGISTER NEW FACE
 def register_new_face(unknown_id, name, relationship):
     global temporary_unknowns
 
@@ -143,9 +143,11 @@ def register_new_face(unknown_id, name, relationship):
         "is_patient": False,
         "last_seen": None,
         "history": [],
-        "conversation_count": 0,
         "last_topic": None,
-        "last_date": None
+        "last_date": None,
+        "memory_insight": None,
+        "memory_confidence": 0,
+        "top_keywords": []
     })
 
     with open(ENCODINGS_FILE, "wb") as f:
