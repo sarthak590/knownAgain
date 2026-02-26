@@ -20,7 +20,6 @@
      style="margin-top:15px;font-size:18px;min-height:40px;font-weight:500;white-space: pre-wrap;">
 </div>
 
-<!-- Registration Panel -->
 <div id="registerPanel" style="display:none; margin-top:15px;">
     <h4>New Person Detected</h4>
     <input type="text" id="newName" placeholder="Enter Name">
@@ -28,7 +27,6 @@
     <button id="saveNew">Save Person</button>
 </div>
 
-<!-- Record Button -->
 <button id="recordBtn" style="margin-top:15px; display:none;">
     Record Conversation
 </button>
@@ -41,7 +39,6 @@ const ctx = canvas.getContext('2d');
 const statusText = document.getElementById('status');
 const infoBox = document.getElementById("info");
 const subtitleBox = document.getElementById("subtitle");
-
 const registerPanel = document.getElementById("registerPanel");
 const saveNewBtn = document.getElementById("saveNew");
 const recordBtn = document.getElementById("recordBtn");
@@ -58,16 +55,29 @@ navigator.mediaDevices.getUserMedia({ video: true })
     .catch(err => console.error(err));
 
 video.onloadedmetadata = () => {
-    canvas.width = video.clientWidth;
-    canvas.height = video.clientHeight;
+
+    // Make canvas match video display size
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    canvas.style.width = video.clientWidth + "px";
+    canvas.style.height = video.clientHeight + "px";
 };
+
+/* ---------------- SEND FRAME TO BACKEND ---------------- */
 
 function captureAndSend() {
     if (!video.videoWidth) return;
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Create temporary canvas for sending image
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
 
-    canvas.toBlob(blob => {
+    const tempCtx = tempCanvas.getContext("2d");
+    tempCtx.drawImage(video, 0, 0);
+
+    tempCanvas.toBlob(blob => {
         const formData = new FormData();
         formData.append('image', blob, 'snapshot.jpg');
 
@@ -95,7 +105,7 @@ function typeWriter(text) {
         if (i < text.length) {
             subtitleBox.innerText += text[i];
             i++;
-            setTimeout(typing, 30);
+            setTimeout(typing, 25);
         } else {
             isTyping = false;
         }
@@ -104,10 +114,42 @@ function typeWriter(text) {
     typing();
 }
 
+/* ---------------- DRAW CENTERED BOX ---------------- */
+
+function drawCenteredBox(face, color, label) {
+
+    const scaleX = canvas.width / video.videoWidth;
+    const scaleY = canvas.height / video.videoHeight;
+
+    const x = face.box.left * scaleX;
+    const y = face.box.top * scaleY;
+    const width = (face.box.right - face.box.left) * scaleX;
+    const height = (face.box.bottom - face.box.top) * scaleY;
+
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+
+    const boxSize = Math.max(width, height) * 1.3;
+
+    const newX = centerX - boxSize / 2;
+    const newY = centerY - boxSize / 2;
+
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(newX, newY, boxSize, boxSize);
+
+    ctx.fillStyle = color;
+    ctx.font = "16px Arial";
+    ctx.fillText(label, newX, newY - 10);
+}
+
 /* ---------------- HANDLE RESPONSE ---------------- */
 
 function handleResponse(data) {
 
+    // Clear only overlay
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (data.status !== "faces_detected") return;
@@ -117,43 +159,23 @@ function handleResponse(data) {
 
     data.faces.forEach(face => {
 
-        const scaleX = canvas.width / video.videoWidth;
-        const scaleY = canvas.height / video.videoHeight;
-
-        const x = face.box.left * scaleX;
-        const y = face.box.top * scaleY;
-        const width = (face.box.right - face.box.left) * scaleX;
-        const height = (face.box.bottom - face.box.top) * scaleY;
-
-        // Patient
         if (face.is_patient) {
-            ctx.strokeStyle = "blue";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(x, y, width, height);
-            ctx.fillStyle = "blue";
-            ctx.fillText("Patient", x, y - 10);
+            drawCenteredBox(face, "blue", "Patient");
             return;
         }
 
-        // Unknown
         if (face.is_new_candidate) {
-            ctx.strokeStyle = "orange";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(x, y, width, height);
-            ctx.fillStyle = "orange";
-            ctx.fillText("Unknown", x, y - 10);
-
+            drawCenteredBox(face, "orange", "Unknown");
             activeUnknownId = face.unknown_id;
             registerPanel.style.display = "block";
             return;
         }
 
-        // Visitor
-        ctx.strokeStyle = "lime";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(x, y, width, height);
-        ctx.fillStyle = "lime";
-        ctx.fillText(face.name + " (" + face.confidence + "%)", x, y - 10);
+        drawCenteredBox(
+            face,
+            "lime",
+            face.name + " (" + face.confidence + "%)"
+        );
 
         activeVisitor = face;
     });
@@ -221,13 +243,11 @@ saveNewBtn.onclick = () => {
     });
 };
 
-//* ---------------- RECORD AUDIO ---------------- */
+/* ---------------- RECORD AUDIO ---------------- */
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-if (!SpeechRecognition) {
-    console.log("Speech recognition not supported in this browser.");
-} else {
+if (SpeechRecognition) {
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -235,9 +255,7 @@ if (!SpeechRecognition) {
     recognition.lang = "en-US";
 
     recordBtn.onclick = () => {
-
         if (!activeVisitor) return;
-
         recordBtn.innerText = "Listening...";
         recognition.start();
     };
@@ -253,8 +271,7 @@ if (!SpeechRecognition) {
         }
 
         finalTranscript = finalTranscript.trim();
-
-        recognition.stop();  // 🔥 important
+        recognition.stop();
 
         fetch('/add-note', {
             method: 'POST',
@@ -278,6 +295,5 @@ if (!SpeechRecognition) {
     };
 }
 </script>
-
 </body>
 </html>
