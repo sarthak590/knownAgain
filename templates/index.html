@@ -1,63 +1,542 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>knownAgain Demo</title>
+    <title>KnownAgain Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@200;300;400&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #e8eef5;
+            --navy: #1a2e4a;
+            --mid-blue: #4a6f9a;
+            --accent: #6090b8;
+            --light: #a8c0d8;
+            --card-bg: #f0f5fa;
+            --divider: #c8d9ea;
+            --orange: #c4894a;
+            --green: #4a9a6a;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: radial-gradient(ellipse at 50% 30%, #dce8f2 0%, #c8d9ea 50%, #b8ccde 100%);
+            font-family: 'Jost', sans-serif;
+            color: var(--navy);
+        }
+
+        /* ── BACKGROUND RINGS ── */
+        .bg-rings {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            left: 50%; top: 38%;
+            transform: translate(-50%, -50%);
+            animation: breathe 7s ease-in-out infinite;
+        }
+        .ring:nth-child(1) { width: 420px; height: 420px; border: 1px solid rgba(100,150,190,0.13); animation-delay: 0s; }
+        .ring:nth-child(2) { width: 720px; height: 720px; border: 1px solid rgba(100,150,190,0.08); animation-delay: 0.7s; }
+        .ring:nth-child(3) { width: 1100px; height: 1100px; border: 1px solid rgba(100,150,190,0.05); animation-delay: 1.4s; }
+        @keyframes breathe {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.012); opacity: 0.55; }
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(232, 238, 245, 0.88);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--divider);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            z-index: 100;
+        }
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 400;
+            font-size: 22px;
+            color: var(--navy);
+            letter-spacing: 0.02em;
+        }
+        .nav-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 100px;
+            padding: 9px 22px;
+            font-family: 'Jost', sans-serif;
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .nav-btn:hover { background: var(--mid-blue); transform: translateY(-1px); }
+
+        /* ── PAGE ── */
+        .page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            padding: 90px 48px 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .page-eyebrow {
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            opacity: 0.55;
+            animation: fadeUp 1s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── MAIN CONTENT CARD ── */
+        .main-card {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            animation: fadeUp 1s ease 0.1s both;
+        }
+
+        /* ── VIDEO AREA ── */
+        .video-wrap {
+            position: relative;
+            width: 460px;
+            height: 380px;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #cdd9e8, #bccbdb);
+            border: 1.5px solid var(--light);
+            box-shadow: 0 12px 50px rgba(26,46,74,0.1);
+        }
+
+        #video {
+            width: 460px;
+            height: 380px;
+            object-fit: cover;
+            display: block;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 460px !important;
+            height: 380px !important;
+        }
+
+        /* ── STATUS BAR ── */
+        .status-bar {
+            width: 460px;
+            background: var(--card-bg);
+            border: 1px solid var(--divider);
+            border-radius: 14px;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(26,46,74,0.06);
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: blink 1.6s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+        #status {
+            font-size: 11px;
+            font-weight: 300;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            margin: 0;
+        }
+
+        /* ── PANELS ── */
+        .panel {
+            width: 460px;
+            background: var(--card-bg);
+            border: 1px solid var(--divider);
+            border-radius: 16px;
+            padding: 24px 28px;
+            box-shadow: 0 4px 20px rgba(26,46,74,0.06);
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .panel-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            opacity: 0.6;
+            margin-bottom: 14px;
+        }
+
+        /* Info box */
+        #info {
+            font-size: 13px;
+            font-weight: 300;
+            line-height: 1.9;
+            color: var(--navy);
+            white-space: pre-wrap;
+            opacity: 0.85;
+        }
+
+        /* Subtitle / typewriter */
+        .subtitle-panel {
+            width: 460px;
+            background: rgba(96,144,184,0.07);
+            border: 1px solid rgba(96,144,184,0.18);
+            border-radius: 14px;
+            padding: 18px 24px;
+            min-height: 58px;
+            display: flex;
+            align-items: center;
+        }
+
+        #subtitle {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 17px;
+            font-weight: 400;
+            color: var(--navy);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            opacity: 0.85;
+        }
+
+        /* Record button */
+        #recordBtn {
+            display: none;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 100px;
+            padding: 14px 40px;
+            font-family: 'Jost', sans-serif;
+            font-size: 11px;
+            font-weight: 300;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+            box-shadow: 0 4px 20px rgba(96,144,184,0.25);
+        }
+        #recordBtn:hover { background: var(--mid-blue); transform: translateY(-1px); }
+
+        /* Timeline panel */
+        #timelinePanel {
+            display: none;
+            width: 460px;
+        }
+        #timelinePanel .panel-title { margin-bottom: 0; }
+
+        #timelineList {
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 14px;
+            padding-right: 4px;
+        }
+        #timelineList::-webkit-scrollbar { width: 3px; }
+        #timelineList::-webkit-scrollbar-thumb { background: var(--light); border-radius: 2px; }
+
+        .timeline-entry {
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(200,217,234,0.55);
+        }
+        .timeline-entry:last-child { border-bottom: none; }
+
+        .timeline-date {
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+
+        .timeline-summary {
+            font-size: 13px;
+            font-weight: 300;
+            color: var(--navy);
+            line-height: 1.6;
+            opacity: 0.85;
+            margin-bottom: 8px;
+        }
+
+        .timeline-keywords {
+            font-size: 11px;
+            font-weight: 300;
+            color: var(--mid-blue);
+            opacity: 0.6;
+            letter-spacing: 0.05em;
+        }
+
+        .transcript-toggle {
+            background: transparent;
+            border: 1px solid var(--divider);
+            border-radius: 100px;
+            padding: 4px 14px;
+            font-family: 'Jost', sans-serif;
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 6px;
+            margin-bottom: 4px;
+        }
+        .transcript-toggle:hover { background: var(--divider); }
+
+        .transcript-body {
+            display: none;
+            font-size: 12px;
+            font-weight: 300;
+            color: var(--navy);
+            line-height: 1.7;
+            background: rgba(200,217,234,0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
+        /* Memory panel */
+        #memoryPanel {
+            display: none;
+            width: 460px;
+        }
+
+        #memoryContent {
+            font-size: 13px;
+            font-weight: 300;
+            color: var(--navy);
+            line-height: 1.8;
+            opacity: 0.85;
+        }
+        #memoryContent strong {
+            font-weight: 400;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            display: block;
+            margin-bottom: 4px;
+            opacity: 0.7;
+        }
+
+        /* Register panel */
+        #registerPanel {
+            display: none;
+            width: 460px;
+        }
+
+        .register-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin-top: 6px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .field label {
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            opacity: 0.6;
+        }
+
+        .field input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--divider);
+            padding: 10px 0;
+            font-family: 'Jost', sans-serif;
+            font-size: 15px;
+            font-weight: 300;
+            color: var(--navy);
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+        .field input::placeholder { color: var(--mid-blue); opacity: 0.3; }
+        .field input:focus { border-bottom-color: var(--accent); }
+
+        #saveNew {
+            width: 100%;
+            margin-top: 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 100px;
+            padding: 14px;
+            font-family: 'Jost', sans-serif;
+            font-size: 11px;
+            font-weight: 300;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        #saveNew:hover { background: var(--mid-blue); transform: translateY(-1px); }
+
+        /* Unknown badge on box */
+        .badge-unknown {
+            display: inline-block;
+            padding: 3px 10px;
+            background: rgba(196,137,74,0.15);
+            border: 1px solid rgba(196,137,74,0.3);
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--orange);
+        }
+
+        .divider-line {
+            width: 100%;
+            height: 1px;
+            background: var(--divider);
+            margin: 4px 0 14px;
+        }
+    </style>
 </head>
 <body>
 
-<h2>knownAgain Live Demo</h2>
-<button onclick="window.location.href='/calendar'"
-        style="margin-bottom:15px;">
-    Open Conversation Calendar
-</button>
-<div style="position: relative; width: 400px;">
-    <video id="video" width="400" autoplay playsinline></video>
-    <canvas id="canvas" style="position:absolute; top:0; left:0;"></canvas>
+<!-- Background rings (splash motif) -->
+<div class="bg-rings">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
 </div>
 
-<h3 id="status">Waiting...</h3>
+<!-- Nav -->
+<nav>
+    <div class="logo">KnownAgain</div>
+    <button class="nav-btn" onclick="window.location.href='/calendar'">Conversation Calendar</button>
+</nav>
 
-<div id="info" style="white-space: pre-wrap; margin-top:10px;"></div>
+<!-- Page -->
+<div class="page">
 
-<div id="subtitle"
-     style="margin-top:15px;font-size:18px;min-height:40px;font-weight:500;white-space: pre-wrap;">
-</div>
+    <div class="page-eyebrow">Live Recognition</div>
 
-<!-- Timeline Panel -->
-<div id="timelinePanel" style="margin-top:20px; display:none;">
-    <h4>Recent Conversations</h4>
-    <div id="timelineList"
-         style="border:1px solid #ccc;
-                padding:10px;
-                max-height:200px;
-                overflow-y:auto;
-                font-size:14px;
-                background:#f9f9f9;">
+    <div class="main-card">
+
+        <!-- Video -->
+        <div class="video-wrap">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- Status -->
+        <div class="status-bar">
+            <div class="status-left">
+                <div class="status-dot"></div>
+                <h3 id="status">Waiting…</h3>
+            </div>
+        </div>
+
+        <!-- Info panel -->
+        <div class="panel" id="infoPanel" style="display:none;">
+            <div class="panel-title">Visitor Info</div>
+            <div class="divider-line"></div>
+            <div id="info"></div>
+        </div>
+
+        <!-- Subtitle / typewriter -->
+        <div class="subtitle-panel">
+            <div id="subtitle"></div>
+        </div>
+
+        <!-- Record button -->
+        <button id="recordBtn">Record Conversation</button>
+
+        <!-- Timeline -->
+        <div id="timelinePanel">
+            <div class="panel">
+                <div class="panel-title">Recent Conversations</div>
+                <div class="divider-line"></div>
+                <div id="timelineList"></div>
+            </div>
+        </div>
+
+        <!-- Memory insight -->
+        <div id="memoryPanel">
+            <div class="panel">
+                <div class="panel-title">Memory Insight</div>
+                <div class="divider-line"></div>
+                <div id="memoryContent"></div>
+            </div>
+        </div>
+
+        <!-- Register panel -->
+        <div id="registerPanel">
+            <div class="panel">
+                <div class="panel-title">New Person Detected</div>
+                <div class="divider-line"></div>
+                <div class="register-fields">
+                    <div class="field">
+                        <label>Full Name</label>
+                        <input type="text" id="newName" placeholder="e.g. Priya Sharma" />
+                    </div>
+                    <div class="field">
+                        <label>Relationship</label>
+                        <input type="text" id="newRelation" placeholder="e.g. Daughter, Nurse, Friend" />
+                    </div>
+                </div>
+                <button id="saveNew">Save Person</button>
+            </div>
+        </div>
+
     </div>
 </div>
-
-<!-- Memory Intelligence Panel -->
-<div id="memoryPanel" style="margin-top:15px; display:none;">
-    <h4>Memory Insight</h4>
-    <div id="memoryContent"
-         style="border:1px solid #bbb;
-                padding:10px;
-                background:#f0f8ff;
-                font-size:14px;">
-    </div>
-</div>
-
-<!-- Registration Panel -->
-<div id="registerPanel" style="display:none; margin-top:15px;">
-    <h4>New Person Detected</h4>
-    <input type="text" id="newName" placeholder="Enter Name">
-    <input type="text" id="newRelation" placeholder="Enter Relationship">
-    <button id="saveNew">Save Person</button>
-</div>
-
-<button id="recordBtn" style="margin-top:15px; display:none;">
-    Record Conversation
-</button>
 
 <script>
 
@@ -69,6 +548,7 @@ const ctx = canvas.getContext('2d');
 
 const statusText = document.getElementById('status');
 const infoBox = document.getElementById("info");
+const infoPanel = document.getElementById("infoPanel");
 const subtitleBox = document.getElementById("subtitle");
 
 const registerPanel = document.getElementById("registerPanel");
@@ -194,52 +674,44 @@ function renderTimeline(history) {
     history.slice().reverse().forEach((entry, index) => {
 
         const container = document.createElement("div");
-        container.style.marginBottom = "10px";
-        container.style.paddingBottom = "8px";
-        container.style.borderBottom = "1px solid #ddd";
+        container.className = "timeline-entry";
 
-        // Unique ID for collapsible transcript
         const transcriptId = "transcript_" + index;
 
         container.innerHTML = `
-            <strong>${entry.date}</strong><br>
-            <em>${entry.summary}</em><br><br>
-
-            <button onclick="toggleTranscript('${transcriptId}')"
-                    style="font-size:12px; margin-bottom:5px;">
-                Show Transcript
-            </button>
-
-            <div id="${transcriptId}"
-                 style="display:none; font-size:13px; background:#f3f3f3; padding:6px; margin-top:5px;">
-                ${entry.raw}
-            </div>
-
-            <div style="margin-top:5px; font-size:12px; color:#555;">
-                <strong>Keywords:</strong> ${(entry.keywords || []).join(", ")}
+            <div class="timeline-date">${entry.date}</div>
+            <div class="timeline-summary">${entry.summary}</div>
+            <button class="transcript-toggle" onclick="toggleTranscript('${transcriptId}')">Show Transcript</button>
+            <div id="${transcriptId}" class="transcript-body">${entry.raw}</div>
+            <div class="timeline-keywords">
+                <span style="opacity:0.5;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;">Keywords · </span>${(entry.keywords || []).join(", ")}
             </div>
         `;
 
         timelineList.appendChild(container);
     });
 }
+
 function toggleTranscript(id) {
-
     const element = document.getElementById(id);
-
-    if (element.style.display === "none") {
-        element.style.display = "block";
-    } else {
+    const btn = element.previousElementSibling;
+    if (element.classList.contains("open")) {
+        element.classList.remove("open");
         element.style.display = "none";
+        if (btn) btn.innerText = "Show Transcript";
+    } else {
+        element.classList.add("open");
+        element.style.display = "block";
+        if (btn) btn.innerText = "Hide Transcript";
     }
 }
+
 /* ---------------- MEMORY PANEL ---------------- */
 
 function renderMemoryInsight(visitor) {
 
     if (!visitor.memory_insight &&
         (!visitor.top_keywords || visitor.top_keywords.length === 0)) {
-
         memoryPanel.style.display = "none";
         return;
     }
@@ -249,18 +721,15 @@ function renderMemoryInsight(visitor) {
     let content = "";
 
     if (visitor.memory_insight) {
-        content += "<strong>Pattern Insight:</strong><br>" +
-                   visitor.memory_insight + "<br><br>";
+        content += "<strong>Pattern Insight</strong>" + visitor.memory_insight + "<br><br>";
     }
 
     if (visitor.memory_confidence !== undefined) {
-        content += "<strong>Memory Confidence:</strong> " +
-                   visitor.memory_confidence + "%<br><br>";
+        content += "<strong>Memory Confidence</strong>" + visitor.memory_confidence + "%<br><br>";
     }
 
     if (visitor.top_keywords && visitor.top_keywords.length > 0) {
-        content += "<strong>Frequent Topics:</strong><br>" +
-                   visitor.top_keywords.join(", ");
+        content += "<strong>Frequent Topics</strong>" + visitor.top_keywords.join(", ");
     }
 
     memoryContent.innerHTML = content;
@@ -320,6 +789,7 @@ function handleResponse(data) {
     if (activeVisitor) {
 
         statusText.innerText = "Visitor Recognized";
+        infoPanel.style.display = "block";
 
         infoBox.innerText =
             "Name: " + activeVisitor.name +
@@ -350,12 +820,13 @@ function handleResponse(data) {
 
         recordBtn.style.display = "none";
         infoBox.innerText = "";
+        infoPanel.style.display = "none";
         subtitleBox.innerText = "";
         timelinePanel.style.display = "none";
         timelineList.innerHTML = "";
         memoryPanel.style.display = "none";
         lastDisplayedTranscript = null;
-        statusText.innerText = "Waiting...";
+        statusText.innerText = "Waiting…";
     }
 }
 
@@ -399,7 +870,7 @@ if (SpeechRecognition) {
     let lastSpeechTime = null;
     let silenceTimer = null;
 
-    const SILENCE_LIMIT = 3000; // 3 seconds = real pause
+    const SILENCE_LIMIT = 3000;
 
     recordBtn.onclick = () => {
 
@@ -421,7 +892,6 @@ if (SpeechRecognition) {
         lastSpeechTime = Date.now();
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
-
             if (event.results[i].isFinal) {
                 finalTranscript += event.results[i][0].transcript + " ";
             }
@@ -438,7 +908,6 @@ if (SpeechRecognition) {
         const silenceDuration = now - lastSpeechTime;
 
         if (silenceDuration > SILENCE_LIMIT) {
-
             stopRecording();
         }
     }
@@ -469,7 +938,7 @@ if (SpeechRecognition) {
 
     recognition.onend = function() {
         if (isRecording) {
-            recognition.start(); // prevent auto-end on small pause
+            recognition.start();
         }
     };
 }

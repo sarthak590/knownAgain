@@ -1,41 +1,510 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Conversation Calendar</title>
+    <title>KnownAgain — Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@200;300;400&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #e8eef5;
+            --navy: #1a2e4a;
+            --mid-blue: #4a6f9a;
+            --accent: #6090b8;
+            --light: #a8c0d8;
+            --card-bg: #f0f5fa;
+            --divider: #c8d9ea;
+            --has-event: rgba(96,144,184,0.13);
+            --has-event-border: rgba(96,144,184,0.35);
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: radial-gradient(ellipse at 50% 25%, #dce8f2 0%, #c8d9ea 50%, #b8ccde 100%);
+            font-family: 'Jost', sans-serif;
+            color: var(--navy);
+        }
+
+        /* ── BACKGROUND RINGS ── */
+        .bg-rings {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            left: 50%; top: 35%;
+            transform: translate(-50%, -50%);
+            animation: breathe 7s ease-in-out infinite;
+        }
+        .ring:nth-child(1) { width: 500px; height: 500px; border: 1px solid rgba(100,150,190,0.1); animation-delay: 0s; }
+        .ring:nth-child(2) { width: 900px; height: 900px; border: 1px solid rgba(100,150,190,0.065); animation-delay: 0.8s; }
+        .ring:nth-child(3) { width: 1300px; height: 1300px; border: 1px solid rgba(100,150,190,0.04); animation-delay: 1.6s; }
+        @keyframes breathe {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.01); opacity: 0.55; }
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(232,238,245,0.88);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--divider);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            z-index: 100;
+        }
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 400;
+            font-size: 22px;
+            color: var(--navy);
+            letter-spacing: 0.02em;
+        }
+        .nav-btn {
+            background: transparent;
+            color: var(--mid-blue);
+            border: 1px solid var(--divider);
+            border-radius: 100px;
+            padding: 8px 20px;
+            font-family: 'Jost', sans-serif;
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* ── PAGE ── */
+        .page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            padding: 80px 48px 60px;
+            display: flex;
+            gap: 28px;
+        }
+
+        /* ── LEFT: CALENDAR ── */
+        .calendar-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            animation: fadeUp 0.8s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Month header */
+        .month-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0 20px;
+        }
+
+        .month-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 36px;
+            font-weight: 300;
+            color: var(--navy);
+            letter-spacing: 0.01em;
+        }
+
+        .month-year {
+            font-size: 13px;
+            font-weight: 200;
+            letter-spacing: 0.2em;
+            color: var(--mid-blue);
+            opacity: 0.6;
+            margin-left: 10px;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .month-nav-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--divider);
+            background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--mid-blue);
+            transition: all 0.2s;
+        }
+        .month-nav-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* Calendar grid wrapper */
+        .calendar-wrap {
+            background: var(--card-bg);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(26,46,74,0.08);
+        }
+
+        /* Day-of-week header */
+        .dow-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 1px solid var(--divider);
+        }
+        .dow-cell {
+            padding: 12px 0;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            opacity: 0.55;
+        }
+
+        /* Calendar grid */
+        #calendarGrid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .cal-cell {
+            min-height: 90px;
+            border-right: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+            padding: 10px 10px 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .cal-cell:nth-child(7n) { border-right: none; }
+        .cal-cell:hover { background: rgba(96,144,184,0.06); }
+        .cal-cell.empty { cursor: default; background: transparent; }
+        .cal-cell.empty:hover { background: transparent; }
+        .cal-cell.has-event { background: var(--has-event); }
+        .cal-cell.has-event:hover { background: rgba(96,144,184,0.2); }
+        .cal-cell.today .day-num {
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .cal-cell.selected { background: rgba(96,144,184,0.15) !important; }
+
+        .day-num {
+            font-size: 13px;
+            font-weight: 300;
+            color: var(--navy);
+            opacity: 0.75;
+            width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Event dots/chips on calendar */
+        .event-chips {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .event-chip {
+            background: rgba(96,144,184,0.18);
+            border-left: 2px solid var(--accent);
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 300;
+            color: var(--navy);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0.85;
+        }
+
+        .more-events {
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            color: var(--mid-blue);
+            opacity: 0.55;
+            padding-left: 2px;
+        }
+
+        /* ── RIGHT: DETAIL PANEL ── */
+        .detail-col {
+            width: 340px;
+            flex-shrink: 0;
+            animation: fadeUp 0.8s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+        }
+
+        .detail-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 8px 40px rgba(26,46,74,0.08);
+            position: sticky;
+            top: 80px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 0;
+        }
+        .detail-panel::-webkit-scrollbar { width: 3px; }
+        .detail-panel::-webkit-scrollbar-thumb { background: var(--light); border-radius: 2px; }
+
+        .detail-panel.visible { display: flex; }
+
+        .detail-date-label {
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            opacity: 0.55;
+            margin-bottom: 6px;
+        }
+
+        .detail-date-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 32px;
+            font-weight: 300;
+            color: var(--navy);
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+
+        .divider-line {
+            width: 100%; height: 1px;
+            background: var(--divider);
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Entry card */
+        .entry-card {
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(200,217,234,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: fadeUp 0.35s ease both;
+        }
+        .entry-card:last-child { border-bottom: none; }
+
+        .entry-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .entry-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 22px;
+            font-weight: 400;
+            color: var(--navy);
+            line-height: 1;
+        }
+
+        .entry-rel {
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(96,144,184,0.1);
+            border: 1px solid rgba(96,144,184,0.2);
+            border-radius: 100px;
+            padding: 3px 10px;
+        }
+
+        .entry-summary {
+            font-size: 13px;
+            font-weight: 300;
+            color: var(--navy);
+            line-height: 1.7;
+            opacity: 0.8;
+            font-style: italic;
+        }
+
+        .transcript-toggle {
+            background: transparent;
+            border: 1px solid var(--divider);
+            border-radius: 100px;
+            padding: 4px 14px;
+            font-family: 'Jost', sans-serif;
+            font-size: 10px;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            cursor: pointer;
+            transition: all 0.2s;
+            align-self: flex-start;
+        }
+        .transcript-toggle:hover { background: var(--divider); }
+
+        .transcript-body {
+            display: none;
+            font-size: 12px;
+            font-weight: 300;
+            color: var(--navy);
+            line-height: 1.75;
+            background: rgba(200,217,234,0.2);
+            border-radius: 8px;
+            padding: 12px 14px;
+            opacity: 0.8;
+        }
+
+        .entry-keywords {
+            font-size: 10px;
+            font-weight: 300;
+            color: var(--mid-blue);
+            opacity: 0.55;
+            letter-spacing: 0.08em;
+        }
+        .entry-keywords span {
+            font-size: 9px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-right: 4px;
+        }
+
+        /* Empty detail state */
+        .detail-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 40px 20px;
+            opacity: 0.35;
+        }
+        .empty-ring {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: 1.5px solid var(--mid-blue);
+        }
+        .empty-text {
+            font-size: 11px;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--mid-blue);
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* No event panel */
+        .no-event-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 8px 40px rgba(26,46,74,0.08);
+            position: sticky;
+            top: 80px;
+            display: flex;
+        }
+    </style>
 </head>
 <body>
 
-<h2>Conversation Calendar</h2>
-
-<button onclick="window.location.href='/'"
-        style="margin-bottom:15px;">
-    ← Back to Live Demo
-</button>
-
-<div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-    <button onclick="changeMonth(-1)">◀</button>
-    <span id="calendarTitle"></span>
-    <button onclick="changeMonth(1)">▶</button>
+<div class="bg-rings">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
 </div>
 
-<div id="calendarGrid"
-     style="display:grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap:4px;">
-</div>
+<nav>
+    <div class="logo">KnownAgain</div>
+    <button class="nav-btn" onclick="window.location.href='/'">← Live Demo</button>
+</nav>
 
-<div id="calendarDetails"
-     style="margin-top:20px;
-            padding:12px;
-            border:1px solid #ccc;
-            display:none;">
+<div class="page">
+
+    <!-- LEFT: Calendar -->
+    <div class="calendar-col">
+
+        <div class="month-header">
+            <div style="display:flex; align-items:baseline; gap:2px;">
+                <div class="month-title" id="calendarTitle"></div>
+            </div>
+            <div class="month-nav">
+                <button class="month-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+                <button class="month-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+            </div>
+        </div>
+
+        <div class="calendar-wrap">
+            <div class="dow-header">
+                <div class="dow-cell">Sun</div>
+                <div class="dow-cell">Mon</div>
+                <div class="dow-cell">Tue</div>
+                <div class="dow-cell">Wed</div>
+                <div class="dow-cell">Thu</div>
+                <div class="dow-cell">Fri</div>
+                <div class="dow-cell">Sat</div>
+            </div>
+            <div id="calendarGrid"></div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT: Detail -->
+    <div class="detail-col">
+
+        <!-- Default empty -->
+        <div class="no-event-panel" id="detailEmpty">
+            <div class="detail-empty">
+                <div class="empty-ring"></div>
+                <div class="empty-text">Select a day to view<br>conversations</div>
+            </div>
+        </div>
+
+        <!-- Event details -->
+        <div class="detail-panel" id="calendarDetails"></div>
+
+    </div>
+
 </div>
 
 <script>
-
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 let calendarData = {};
+let selectedDate = null;
+
+const today = new Date();
+const todayStr = today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
 
 function fetchCalendarData() {
     fetch('/calendar_data')
@@ -47,10 +516,8 @@ function fetchCalendarData() {
 }
 
 function renderCalendar() {
-
     const grid = document.getElementById("calendarGrid");
     const title = document.getElementById("calendarTitle");
-
     grid.innerHTML = "";
 
     const monthNames = [
@@ -58,83 +525,124 @@ function renderCalendar() {
         "July","August","September","October","November","December"
     ];
 
-    title.innerText = monthNames[currentMonth] + " " + currentYear;
+    // Split title into month + year
+    title.innerHTML = `${monthNames[currentMonth]} <span class="month-year">${currentYear}</span>`;
 
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
+    // Empty leading cells
     for (let i = 0; i < firstDay; i++) {
-        grid.appendChild(document.createElement("div"));
+        const empty = document.createElement("div");
+        empty.className = "cal-cell empty";
+        grid.appendChild(empty);
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-
         const dateString = currentYear + "-" +
             String(currentMonth + 1).padStart(2, "0") + "-" +
             String(day).padStart(2, "0");
 
         const cell = document.createElement("div");
-        cell.innerText = day;
-        cell.style.padding = "10px";
-        cell.style.textAlign = "center";
-        cell.style.cursor = "pointer";
-        cell.style.border = "1px solid #ddd";
+        cell.className = "cal-cell";
 
+        if (dateString === todayStr) cell.classList.add("today");
+        if (dateString === selectedDate) cell.classList.add("selected");
+        if (calendarData[dateString]) cell.classList.add("has-event");
+
+        // Day number
+        const numEl = document.createElement("div");
+        numEl.className = "day-num";
+        numEl.innerText = day;
+        cell.appendChild(numEl);
+
+        // Event chips
         if (calendarData[dateString]) {
-            cell.style.background = "#b3e5fc";
+            const chips = document.createElement("div");
+            chips.className = "event-chips";
+            const entries = calendarData[dateString];
+            const maxShow = 2;
+            entries.slice(0, maxShow).forEach(entry => {
+                const chip = document.createElement("div");
+                chip.className = "event-chip";
+                chip.innerText = entry.name;
+                chips.appendChild(chip);
+            });
+            if (entries.length > maxShow) {
+                const more = document.createElement("div");
+                more.className = "more-events";
+                more.innerText = `+${entries.length - maxShow} more`;
+                chips.appendChild(more);
+            }
+            cell.appendChild(chips);
         }
 
         cell.onclick = () => showDateDetails(dateString);
-
         grid.appendChild(cell);
     }
 }
 
 function changeMonth(offset) {
-
     currentMonth += offset;
-
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    }
-
-    if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
-
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
     renderCalendar();
 }
 
 function showDateDetails(date) {
+    selectedDate = date;
+    renderCalendar();
 
-    const details = document.getElementById("calendarDetails");
+    const panel = document.getElementById("calendarDetails");
+    const emptyState = document.getElementById("detailEmpty");
 
     if (!calendarData[date]) {
-        details.style.display = "none";
+        panel.classList.remove("visible");
+        emptyState.style.display = "flex";
         return;
     }
 
-    details.style.display = "block";
-    details.innerHTML = "<strong>" + date + "</strong><br><br>";
+    emptyState.style.display = "none";
+    panel.classList.add("visible");
 
-    calendarData[date].forEach(entry => {
+    // Format date nicely
+    const d = new Date(date + "T00:00:00");
+    const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const niceDateLabel = dayNames[d.getDay()];
+    const niceDateTitle = `${d.getDate()} ${monthNames[d.getMonth()]}`;
 
-        details.innerHTML +=
-            "<strong>" + entry.name + "</strong> (" + entry.relationship + ")<br>" +
-            "<em>" + entry.summary + "</em><br><br>" +
-            "<div style='background:#f3f3f3; padding:6px;'>" +
-            entry.raw +
-            "</div><br>" +
-            "<div style='font-size:12px; color:#555;'>" +
-            "Keywords: " + entry.keywords.join(", ") +
-            "</div><br><hr>";
+    let html = `
+        <div class="detail-date-label">${niceDateLabel}</div>
+        <div class="detail-date-title">${niceDateTitle}</div>
+        <div class="divider-line"></div>
+    `;
+
+    calendarData[date].forEach((entry, i) => {
+        const tId = "t_" + date.replace(/-/g,"") + "_" + i;
+        html += `
+            <div class="entry-card">
+                <div class="entry-header">
+                    <div class="entry-name">${entry.name}</div>
+                    <div class="entry-rel">${entry.relationship}</div>
+                </div>
+                <div class="entry-summary">${entry.summary}</div>
+                <button class="transcript-toggle" onclick="toggleTranscript('${tId}')">Show Transcript</button>
+                <div id="${tId}" class="transcript-body">${entry.raw}</div>
+                <div class="entry-keywords"><span>Keywords ·</span>${entry.keywords.join(", ")}</div>
+            </div>
+        `;
     });
+
+    panel.innerHTML = html;
+}
+
+function toggleTranscript(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === "none" || el.style.display === "" ? "block" : "none";
 }
 
 fetchCalendarData();
-
 </script>
 </body>
 </html>
