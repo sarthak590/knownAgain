@@ -100,7 +100,45 @@ def home():
 # ---------------------------------------------------
 # 🔵 Face Recognition
 # ---------------------------------------------------
+@app.route('/calendar_data')
+def calendar_data():
 
+    try:
+        with open(ENCODINGS_FILE, "rb") as f:
+            people = pickle.load(f)
+
+        calendar_map = {}
+
+        for person in people:
+
+            name = person.get("name")
+            relationship = person.get("relationship")
+            history = person.get("history", [])
+
+            for entry in history:
+
+                date_only = entry["date"].split(" ")[0]
+
+                if date_only not in calendar_map:
+                    calendar_map[date_only] = []
+
+                calendar_map[date_only].append({
+                    "name": name,
+                    "relationship": relationship,
+                    "summary": entry.get("summary"),
+                    "raw": entry.get("raw"),
+                    "keywords": entry.get("keywords", [])
+                })
+
+        return jsonify(calendar_map)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/calendar')
+def calendar_page():
+    return render_template("calendar.html")
 @app.route('/recognize', methods=['POST'])
 def recognize():
     image = request.files['image']
