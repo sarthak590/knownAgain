@@ -380,58 +380,96 @@ saveNewBtn.onclick = () => {
     });
 };
 
-/* ---------------- RECORD AUDIO ---------------- */
+/* ---------------- SMART AUTO STOP RECORDING ---------------- */
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
 
+    let isRecording = false;
+    let finalTranscript = "";
+    let lastSpeechTime = null;
+    let silenceTimer = null;
+
+    const SILENCE_LIMIT = 3000; // 3 seconds = real pause
+
     recordBtn.onclick = () => {
+
         if (!activeVisitor) return;
-        recordBtn.innerText = "Listening...";
-        recognition.start();
+
+        if (!isRecording) {
+            finalTranscript = "";
+            recognition.start();
+            isRecording = true;
+            recordBtn.innerText = "Listening...";
+            lastSpeechTime = Date.now();
+
+            silenceTimer = setInterval(checkSilence, 1000);
+        }
     };
 
     recognition.onresult = function(event) {
 
-        if (!activeVisitor) return;
+        lastSpeechTime = Date.now();
 
-        let finalTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
 
-        for (let i = 0; i < event.results.length; i++) {
-            finalTranscript += event.results[i][0].transcript + " ";
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + " ";
+            }
         }
 
-        finalTranscript = finalTranscript.trim();
+        subtitleBox.innerText = finalTranscript;
+    };
+
+    function checkSilence() {
+
+        if (!isRecording) return;
+
+        const now = Date.now();
+        const silenceDuration = now - lastSpeechTime;
+
+        if (silenceDuration > SILENCE_LIMIT) {
+
+            stopRecording();
+        }
+    }
+
+    function stopRecording() {
+
         recognition.stop();
-
-        fetch('/add-note', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: activeVisitor.name,
-                note: finalTranscript
-            })
-        });
-
+        clearInterval(silenceTimer);
+        isRecording = false;
         recordBtn.innerText = "Record Conversation";
-    };
 
-    recognition.onend = function() {
-        recordBtn.innerText = "Record Conversation";
-    };
+        if (finalTranscript.trim().length > 0) {
+            fetch('/add-note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: activeVisitor.name,
+                    note: finalTranscript.trim()
+                })
+            });
+        }
+    }
 
     recognition.onerror = function(event) {
         console.log("Speech error:", event.error);
-        recordBtn.innerText = "Record Conversation";
+        stopRecording();
+    };
+
+    recognition.onend = function() {
+        if (isRecording) {
+            recognition.start(); // prevent auto-end on small pause
+        }
     };
 }
-
 </script>
 </body>
 </html>
