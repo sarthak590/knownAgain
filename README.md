@@ -120,7 +120,7 @@ Calendar + Timeline UI
 
 1️⃣ Clone Repository
 
-git clone https://github.com/yourusername/knownagain.git
+git clone "url"
 cd knownagain
 
 2️⃣ Create Virtual Environment
