@@ -537,6 +537,33 @@
 
     </div>
 </div>
+<div id="sidePanel" style="
+    position: fixed;
+    top: 0;
+    right: -350px;
+    width: 320px;
+    height: 100%;
+    background: white;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+    padding: 20px;
+    transition: right 0.3s ease;
+    z-index: 999;
+">
+
+    <h3 style="margin-bottom:10px;">Person Info</h3>
+    <div id="sideContent" style="white-space: pre-wrap;"></div>
+
+    <button onclick="closePanel()" style="
+        margin-top:20px;
+        padding:10px;
+        border:none;
+        background:#6090b8;
+        color:white;
+        border-radius:6px;
+        cursor:pointer;
+    ">Close</button>
+
+</div>
 
 <script>
 
@@ -562,26 +589,22 @@ const memoryPanel = document.getElementById("memoryPanel");
 const memoryContent = document.getElementById("memoryContent");
 
 let activeVisitor = null;
+let selectedPerson = null;
 let activeUnknownId = null;
 let lastDisplayedTranscript = null;
-let isTyping = false;
-
-/* ---------------- STABILITY BUFFER ---------------- */
-
-let faceStability = {};
-const REQUIRED_STABLE_FRAMES = 3;
+let clickableFaces = [];
 
 /* ---------------- CAMERA ---------------- */
 
 navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => video.srcObject = stream)
-    .catch(err => console.error(err));
+.then(stream => {
+    video.srcObject = stream;
+})
+.catch(err => console.error("Camera error:", err));
 
 video.onloadedmetadata = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.style.width = video.clientWidth + "px";
-    canvas.style.height = video.clientHeight + "px";
 };
 
 /* ---------------- SEND FRAME ---------------- */
@@ -605,59 +628,157 @@ function captureAndSend() {
             body: formData
         })
         .then(res => res.json())
-        .then(data => handleResponse(data));
+        .then(data => handleResponse(data))
+        .catch(err => console.error(err));
     }, 'image/jpeg');
 }
 
 setInterval(captureAndSend, 400);
 
-/* ---------------- TYPEWRITER ---------------- */
-
-function typeWriter(text) {
-    if (isTyping) return;
-    isTyping = true;
-    subtitleBox.innerText = "";
-    let i = 0;
-
-    function typing() {
-        if (i < text.length) {
-            subtitleBox.innerText += text[i];
-            i++;
-            setTimeout(typing, 25);
-        } else {
-            isTyping = false;
-        }
-    }
-    typing();
-}
-
 /* ---------------- DRAW BOX ---------------- */
 
-function drawCenteredBox(face, color, label) {
+function drawCenteredBox(face, color, label, extraText = "") {
 
-    const scaleX = canvas.width / video.videoWidth;
-    const scaleY = canvas.height / video.videoHeight;
+    const x = face.box.left;
+    const y = face.box.top;
+    const width = face.box.right - face.box.left;
+    const height = face.box.bottom - face.box.top;
 
-    const x = face.box.left * scaleX;
-    const y = face.box.top * scaleY;
-    const width = (face.box.right - face.box.left) * scaleX;
-    const height = (face.box.bottom - face.box.top) * scaleY;
-
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    const boxSize = Math.max(width, height) * 1.3;
-
-    const newX = centerX - boxSize / 2;
-    const newY = centerY - boxSize / 2;
+    clickableFaces.push({
+        x, y, width, height, data: face
+    });
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(newX, newY, boxSize, boxSize);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, width, height);
 
-    ctx.fillStyle = color;
-    ctx.font = "16px Arial";
-    ctx.fillText(label, newX, newY - 10);
+    let text = label;
+
+    if (extraText) {
+        text += " • " + extraText.substring(0, 20) + "...";
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(x, y - 25, 200, 20);
+
+    ctx.fillStyle = "white";
+    ctx.font = "13px Arial";
+    ctx.fillText(text, x + 5, y - 10);
 }
+
+/* ---------------- HANDLE RESPONSE ---------------- */
+
+function handleResponse(data) {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    clickableFaces = [];
+
+    if (data.status !== "faces_detected") return;
+
+    activeVisitor = null;
+    activeUnknownId = null;
+
+    data.faces.forEach(face => {
+
+        // ✅ keep selected person updated
+        if (selectedPerson && face.name === selectedPerson.name) {
+            selectedPerson = face;
+            activeVisitor = face;
+        }
+
+        let color = "lime";
+        let label = face.name;
+
+        if (face.is_patient) {
+            color = "blue";
+            label = "Patient";
+        }
+
+        if (face.is_new_candidate) {
+            color = "orange";
+            label = "Unknown";
+            activeUnknownId = face.unknown_id;
+            registerPanel.style.display = "block";
+        }
+
+        drawCenteredBox(face, color, label, face.last_topic);
+
+        if (!selectedPerson && !activeVisitor && !face.is_new_candidate) {
+            activeVisitor = face;
+        }
+    });
+
+    if (!activeUnknownId) registerPanel.style.display = "none";
+
+    const person = selectedPerson || activeVisitor;
+
+    if (person) {
+
+        statusText.innerText = "Visitor Recognized";
+        infoPanel.style.display = "block";
+        recordBtn.style.display = "block";
+
+        infoBox.innerText =
+            "Name: " + (person.name || "-") +
+            "\nRelationship: " + (person.relationship || "-") +
+            "\nLast seen: " + (person.last_seen || "-") +
+            "\nTotal conversations: " + (person.conversation_count || 0) +
+            "\nLast conversation date: " + (person.last_date || "-");
+
+        if (person.last_topic && person.last_topic !== lastDisplayedTranscript) {
+            subtitleBox.innerText =
+                person.last_date
+                ? "On " + person.last_date + ", you talked about: " + person.last_topic
+                : person.last_topic;
+
+            lastDisplayedTranscript = person.last_topic;
+        }
+
+        renderTimeline(person.recent_history);
+        renderMemoryInsight(person);
+
+    } else if (!selectedPerson) {
+
+        statusText.innerText = "Waiting…";
+        infoPanel.style.display = "none";
+        recordBtn.style.display = "none";
+        subtitleBox.innerText = "";
+        timelinePanel.style.display = "none";
+        memoryPanel.style.display = "none";
+        lastDisplayedTranscript = null;
+    }
+}
+
+/* ---------------- CLICK ---------------- */
+
+canvas.addEventListener("click", function(event) {
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    let clicked = false;
+
+    clickableFaces.forEach(faceObj => {
+
+        const { x, y, width, height, data } = faceObj;
+
+        if (
+            clickX >= x &&
+            clickX <= x + width &&
+            clickY >= y &&
+            clickY <= y + height
+        ) {
+            selectedPerson = data;
+openPanel(data);   // 🔥 NEW
+clicked = true;
+        }
+    });
+
+    if (!clicked) {
+        selectedPerson = null;
+    }
+});
 
 /* ---------------- TIMELINE ---------------- */
 
@@ -671,163 +792,26 @@ function renderTimeline(history) {
     timelinePanel.style.display = "block";
     timelineList.innerHTML = "";
 
-    history.slice().reverse().forEach((entry, index) => {
+    history.slice().reverse().forEach(entry => {
 
-        const container = document.createElement("div");
-        container.className = "timeline-entry";
-
-        const transcriptId = "transcript_" + index;
-
-        container.innerHTML = `
-            <div class="timeline-date">${entry.date}</div>
-            <div class="timeline-summary">${entry.summary}</div>
-            <button class="transcript-toggle" onclick="toggleTranscript('${transcriptId}')">Show Transcript</button>
-            <div id="${transcriptId}" class="transcript-body">${entry.raw}</div>
-            <div class="timeline-keywords">
-                <span style="opacity:0.5;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;">Keywords · </span>${(entry.keywords || []).join(", ")}
-            </div>
-        `;
-
-        timelineList.appendChild(container);
+        const div = document.createElement("div");
+        div.className = "timeline-entry";
+        div.innerText = entry.summary;
+        timelineList.appendChild(div);
     });
 }
 
-function toggleTranscript(id) {
-    const element = document.getElementById(id);
-    const btn = element.previousElementSibling;
-    if (element.classList.contains("open")) {
-        element.classList.remove("open");
-        element.style.display = "none";
-        if (btn) btn.innerText = "Show Transcript";
-    } else {
-        element.classList.add("open");
-        element.style.display = "block";
-        if (btn) btn.innerText = "Hide Transcript";
-    }
-}
-
-/* ---------------- MEMORY PANEL ---------------- */
+/* ---------------- MEMORY ---------------- */
 
 function renderMemoryInsight(visitor) {
 
-    if (!visitor.memory_insight &&
-        (!visitor.top_keywords || visitor.top_keywords.length === 0)) {
+    if (!visitor.memory_insight) {
         memoryPanel.style.display = "none";
         return;
     }
 
     memoryPanel.style.display = "block";
-
-    let content = "";
-
-    if (visitor.memory_insight) {
-        content += "<strong>Pattern Insight</strong>" + visitor.memory_insight + "<br><br>";
-    }
-
-    if (visitor.memory_confidence !== undefined) {
-        content += "<strong>Memory Confidence</strong>" + visitor.memory_confidence + "%<br><br>";
-    }
-
-    if (visitor.top_keywords && visitor.top_keywords.length > 0) {
-        content += "<strong>Frequent Topics</strong>" + visitor.top_keywords.join(", ");
-    }
-
-    memoryContent.innerHTML = content;
-}
-
-/* ---------------- HANDLE RESPONSE ---------------- */
-
-function handleResponse(data) {
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (data.status !== "faces_detected") return;
-
-    let currentFrameKeys = [];
-
-    data.faces.forEach(face => {
-        const key = face.name + "_" + (face.is_new_candidate ? "unknown" : "known");
-        currentFrameKeys.push(key);
-
-        if (!faceStability[key]) faceStability[key] = 0;
-        faceStability[key]++;
-    });
-
-    Object.keys(faceStability).forEach(key => {
-        if (!currentFrameKeys.includes(key)) {
-            faceStability[key]--;
-            if (faceStability[key] <= 0) delete faceStability[key];
-        }
-    });
-
-    activeVisitor = null;
-    activeUnknownId = null;
-
-    data.faces.forEach(face => {
-
-        const key = face.name + "_" + (face.is_new_candidate ? "unknown" : "known");
-        if (faceStability[key] < REQUIRED_STABLE_FRAMES) return;
-
-        if (face.is_patient) {
-            drawCenteredBox(face, "blue", "Patient");
-            return;
-        }
-
-        if (face.is_new_candidate) {
-            drawCenteredBox(face, "orange", "Unknown");
-            activeUnknownId = face.unknown_id;
-            registerPanel.style.display = "block";
-            return;
-        }
-
-        drawCenteredBox(face, "lime", face.name + " (" + face.confidence + "%)");
-        activeVisitor = face;
-    });
-
-    if (!activeUnknownId) registerPanel.style.display = "none";
-
-    if (activeVisitor) {
-
-        statusText.innerText = "Visitor Recognized";
-        infoPanel.style.display = "block";
-
-        infoBox.innerText =
-            "Name: " + activeVisitor.name +
-            "\nRelationship: " + activeVisitor.relationship +
-            "\nLast seen: " + activeVisitor.last_seen +
-            "\nTotal conversations: " + (activeVisitor.conversation_count || 0) +
-            "\nLast conversation date: " + (activeVisitor.last_date || "None");
-
-        recordBtn.style.display = "block";
-
-        if (activeVisitor.last_topic &&
-            activeVisitor.last_topic !== lastDisplayedTranscript) {
-
-            typeWriter(
-                activeVisitor.last_date
-                    ? "On " + activeVisitor.last_date +
-                      ", you talked about: " + activeVisitor.last_topic
-                    : "No previous conversations recorded."
-            );
-
-            lastDisplayedTranscript = activeVisitor.last_topic;
-        }
-
-        renderTimeline(activeVisitor.recent_history);
-        renderMemoryInsight(activeVisitor);
-
-    } else {
-
-        recordBtn.style.display = "none";
-        infoBox.innerText = "";
-        infoPanel.style.display = "none";
-        subtitleBox.innerText = "";
-        timelinePanel.style.display = "none";
-        timelineList.innerHTML = "";
-        memoryPanel.style.display = "none";
-        lastDisplayedTranscript = null;
-        statusText.innerText = "Waiting…";
-    }
+    memoryContent.innerText = visitor.memory_insight;
 }
 
 /* ---------------- REGISTER ---------------- */
@@ -844,8 +828,8 @@ saveNewBtn.onclick = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             unknown_id: activeUnknownId,
-            name: name,
-            relationship: relationship
+            name,
+            relationship
         })
     }).then(() => {
         registerPanel.style.display = "none";
@@ -853,95 +837,29 @@ saveNewBtn.onclick = () => {
         document.getElementById("newRelation").value = "";
     });
 };
+function openPanel(person) {
 
-/* ---------------- SMART AUTO STOP RECORDING ---------------- */
+    const panel = document.getElementById("sidePanel");
+    const content = document.getElementById("sideContent");
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    content.innerText =
+        "Name: " + (person.name || "-") +
+        "\nRelationship: " + (person.relationship || "-") +
+        "\nLast seen: " + (person.last_seen || "-") +
+        "\nTotal conversations: " + (person.conversation_count || 0) +
+        "\nLast topic: " + (person.last_topic || "-");
 
-if (SpeechRecognition) {
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    let isRecording = false;
-    let finalTranscript = "";
-    let lastSpeechTime = null;
-    let silenceTimer = null;
-
-    const SILENCE_LIMIT = 3000;
-
-    recordBtn.onclick = () => {
-
-        if (!activeVisitor) return;
-
-        if (!isRecording) {
-            finalTranscript = "";
-            recognition.start();
-            isRecording = true;
-            recordBtn.innerText = "Listening...";
-            lastSpeechTime = Date.now();
-
-            silenceTimer = setInterval(checkSilence, 1000);
-        }
-    };
-
-    recognition.onresult = function(event) {
-
-        lastSpeechTime = Date.now();
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript + " ";
-            }
-        }
-
-        subtitleBox.innerText = finalTranscript;
-    };
-
-    function checkSilence() {
-
-        if (!isRecording) return;
-
-        const now = Date.now();
-        const silenceDuration = now - lastSpeechTime;
-
-        if (silenceDuration > SILENCE_LIMIT) {
-            stopRecording();
-        }
-    }
-
-    function stopRecording() {
-
-        recognition.stop();
-        clearInterval(silenceTimer);
-        isRecording = false;
-        recordBtn.innerText = "Record Conversation";
-
-        if (finalTranscript.trim().length > 0) {
-            fetch('/add-note', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: activeVisitor.name,
-                    note: finalTranscript.trim()
-                })
-            });
-        }
-    }
-
-    recognition.onerror = function(event) {
-        console.log("Speech error:", event.error);
-        stopRecording();
-    };
-
-    recognition.onend = function() {
-        if (isRecording) {
-            recognition.start();
-        }
-    };
+    panel.style.right = "0";
 }
+
+function closePanel() {
+    document.getElementById("sidePanel").style.right = "-350px";
+}
+    document.addEventListener("click", function(e) {
+    if (!e.target.closest("#sidePanel") && !e.target.closest("canvas")) {
+        closePanel();
+    }
+});
 </script>
 </body>
 </html>

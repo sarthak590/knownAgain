@@ -57,6 +57,7 @@ def generate_memory_insight(history):
         return None
 
     # Combine last 3 summaries
+    ''
     recent = history[-3:]
     combined_text = " ".join([h["summary"] for h in recent])
 
