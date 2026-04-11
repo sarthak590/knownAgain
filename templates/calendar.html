@@ -432,6 +432,26 @@
             top: 80px;
             display: flex;
         }
+        /* 🔥 RELATIONSHIP COLORS */
+.chip-lover {
+    background: rgba(231, 76, 60, 0.2);
+    border-left: 3px solid #e74c3c;
+}
+
+.chip-friend {
+    background: rgba(52, 152, 219, 0.2);
+    border-left: 3px solid #3498db;
+}
+
+.chip-monk {
+    background: rgba(46, 204, 113, 0.2);
+    border-left: 3px solid #2ecc71;
+}
+
+.chip-teacher {
+    background: rgba(155, 89, 182, 0.2);
+    border-left: 3px solid #9b59b6;
+}
     </style>
 </head>
 <body>
@@ -563,11 +583,25 @@ function renderCalendar() {
             const entries = calendarData[dateString];
             const maxShow = 2;
             entries.slice(0, maxShow).forEach(entry => {
-                const chip = document.createElement("div");
-                chip.className = "event-chip";
-                chip.innerText = entry.name;
-                chips.appendChild(chip);
-            });
+    const chip = document.createElement("div");
+
+    // base class
+    chip.className = "event-chip";
+
+    // 🔥 relationship coloring
+    if (entry.relationship) {
+        const rel = entry.relationship.toLowerCase();
+
+        if (rel.includes("lover")) chip.classList.add("chip-lover");
+        else if (rel.includes("friend")) chip.classList.add("chip-friend");
+        else if (rel.includes("monk")) chip.classList.add("chip-monk");
+        else if (rel.includes("teacher")) chip.classList.add("chip-teacher");
+    }
+
+    chip.innerText = entry.name;
+
+    chips.appendChild(chip);
+});
             if (entries.length > maxShow) {
                 const more = document.createElement("div");
                 more.className = "more-events";

@@ -1,865 +1,705 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>KnownAgain Demo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@200;300;400&display=swap" rel="stylesheet" />
-    <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --bg: #e8eef5;
-            --navy: #1a2e4a;
-            --mid-blue: #4a6f9a;
-            --accent: #6090b8;
-            --light: #a8c0d8;
-            --card-bg: #f0f5fa;
-            --divider: #c8d9ea;
-            --orange: #c4894a;
-            --green: #4a9a6a;
-        }
-
-        html, body {
-            min-height: 100vh;
-            background: radial-gradient(ellipse at 50% 30%, #dce8f2 0%, #c8d9ea 50%, #b8ccde 100%);
-            font-family: 'Jost', sans-serif;
-            color: var(--navy);
-        }
-
-        /* ── BACKGROUND RINGS ── */
-        .bg-rings {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 0;
-        }
-        .ring {
-            position: absolute;
-            border-radius: 50%;
-            left: 50%; top: 38%;
-            transform: translate(-50%, -50%);
-            animation: breathe 7s ease-in-out infinite;
-        }
-        .ring:nth-child(1) { width: 420px; height: 420px; border: 1px solid rgba(100,150,190,0.13); animation-delay: 0s; }
-        .ring:nth-child(2) { width: 720px; height: 720px; border: 1px solid rgba(100,150,190,0.08); animation-delay: 0.7s; }
-        .ring:nth-child(3) { width: 1100px; height: 1100px; border: 1px solid rgba(100,150,190,0.05); animation-delay: 1.4s; }
-        @keyframes breathe {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            50% { transform: translate(-50%, -50%) scale(1.012); opacity: 0.55; }
-        }
-
-        /* ── NAV ── */
-        nav {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: 60px;
-            background: rgba(232, 238, 245, 0.88);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--divider);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 48px;
-            z-index: 100;
-        }
-        .logo {
-            font-family: 'Cormorant Garamond', serif;
-            font-weight: 400;
-            font-size: 22px;
-            color: var(--navy);
-            letter-spacing: 0.02em;
-        }
-        .nav-btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 100px;
-            padding: 9px 22px;
-            font-family: 'Jost', sans-serif;
-            font-size: 10px;
-            font-weight: 300;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.15s;
-        }
-        .nav-btn:hover { background: var(--mid-blue); transform: translateY(-1px); }
-
-        /* ── PAGE ── */
-        .page {
-            position: relative;
-            z-index: 1;
-            min-height: 100vh;
-            padding: 90px 48px 60px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 28px;
-        }
-
-        .page-eyebrow {
-            font-size: 10px;
-            font-weight: 300;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            opacity: 0.55;
-            animation: fadeUp 1s ease both;
-        }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(14px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ── MAIN CONTENT CARD ── */
-        .main-card {
-            width: 100%;
-            max-width: 520px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            animation: fadeUp 1s ease 0.1s both;
-        }
-
-        /* ── VIDEO AREA ── */
-        .video-wrap {
-            position: relative;
-            width: 460px;
-            height: 380px;
-            border-radius: 20px;
-            overflow: hidden;
-            background: linear-gradient(145deg, #cdd9e8, #bccbdb);
-            border: 1.5px solid var(--light);
-            box-shadow: 0 12px 50px rgba(26,46,74,0.1);
-        }
-
-        #video {
-            width: 460px;
-            height: 380px;
-            object-fit: cover;
-            display: block;
-        }
-
-        #canvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 460px !important;
-            height: 380px !important;
-        }
-
-        /* ── STATUS BAR ── */
-        .status-bar {
-            width: 460px;
-            background: var(--card-bg);
-            border: 1px solid var(--divider);
-            border-radius: 14px;
-            padding: 14px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 4px 20px rgba(26,46,74,0.06);
-        }
-
-        .status-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: var(--accent);
-            animation: blink 1.6s ease-in-out infinite;
-            flex-shrink: 0;
-        }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-
-        #status {
-            font-size: 11px;
-            font-weight: 300;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            margin: 0;
-        }
-
-        /* ── PANELS ── */
-        .panel {
-            width: 460px;
-            background: var(--card-bg);
-            border: 1px solid var(--divider);
-            border-radius: 16px;
-            padding: 24px 28px;
-            box-shadow: 0 4px 20px rgba(26,46,74,0.06);
-            animation: fadeUp 0.4s ease both;
-        }
-
-        .panel-title {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 11px;
-            font-weight: 400;
-            letter-spacing: 0.28em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            opacity: 0.6;
-            margin-bottom: 14px;
-        }
-
-        /* Info box */
-        #info {
-            font-size: 13px;
-            font-weight: 300;
-            line-height: 1.9;
-            color: var(--navy);
-            white-space: pre-wrap;
-            opacity: 0.85;
-        }
-
-        /* Subtitle / typewriter */
-        .subtitle-panel {
-            width: 460px;
-            background: rgba(96,144,184,0.07);
-            border: 1px solid rgba(96,144,184,0.18);
-            border-radius: 14px;
-            padding: 18px 24px;
-            min-height: 58px;
-            display: flex;
-            align-items: center;
-        }
-
-        #subtitle {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 17px;
-            font-weight: 400;
-            color: var(--navy);
-            line-height: 1.6;
-            white-space: pre-wrap;
-            opacity: 0.85;
-        }
-
-        /* Record button */
-        #recordBtn {
-            display: none;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 100px;
-            padding: 14px 40px;
-            font-family: 'Jost', sans-serif;
-            font-size: 11px;
-            font-weight: 300;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.15s;
-            box-shadow: 0 4px 20px rgba(96,144,184,0.25);
-        }
-        #recordBtn:hover { background: var(--mid-blue); transform: translateY(-1px); }
-
-        /* Timeline panel */
-        #timelinePanel {
-            display: none;
-            width: 460px;
-        }
-        #timelinePanel .panel-title { margin-bottom: 0; }
-
-        #timelineList {
-            max-height: 220px;
-            overflow-y: auto;
-            margin-top: 14px;
-            padding-right: 4px;
-        }
-        #timelineList::-webkit-scrollbar { width: 3px; }
-        #timelineList::-webkit-scrollbar-thumb { background: var(--light); border-radius: 2px; }
-
-        .timeline-entry {
-            padding: 14px 0;
-            border-bottom: 1px solid rgba(200,217,234,0.55);
-        }
-        .timeline-entry:last-child { border-bottom: none; }
-
-        .timeline-date {
-            font-size: 10px;
-            font-weight: 300;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            opacity: 0.6;
-            margin-bottom: 4px;
-        }
-
-        .timeline-summary {
-            font-size: 13px;
-            font-weight: 300;
-            color: var(--navy);
-            line-height: 1.6;
-            opacity: 0.85;
-            margin-bottom: 8px;
-        }
-
-        .timeline-keywords {
-            font-size: 11px;
-            font-weight: 300;
-            color: var(--mid-blue);
-            opacity: 0.6;
-            letter-spacing: 0.05em;
-        }
-
-        .transcript-toggle {
-            background: transparent;
-            border: 1px solid var(--divider);
-            border-radius: 100px;
-            padding: 4px 14px;
-            font-family: 'Jost', sans-serif;
-            font-size: 10px;
-            font-weight: 300;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 6px;
-            margin-bottom: 4px;
-        }
-        .transcript-toggle:hover { background: var(--divider); }
-
-        .transcript-body {
-            display: none;
-            font-size: 12px;
-            font-weight: 300;
-            color: var(--navy);
-            line-height: 1.7;
-            background: rgba(200,217,234,0.2);
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-top: 6px;
-            opacity: 0.8;
-        }
-
-        /* Memory panel */
-        #memoryPanel {
-            display: none;
-            width: 460px;
-        }
-
-        #memoryContent {
-            font-size: 13px;
-            font-weight: 300;
-            color: var(--navy);
-            line-height: 1.8;
-            opacity: 0.85;
-        }
-        #memoryContent strong {
-            font-weight: 400;
-            font-size: 10px;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            display: block;
-            margin-bottom: 4px;
-            opacity: 0.7;
-        }
-
-        /* Register panel */
-        #registerPanel {
-            display: none;
-            width: 460px;
-        }
-
-        .register-fields {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            margin-top: 6px;
-        }
-
-        .field {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .field label {
-            font-size: 10px;
-            font-weight: 300;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            color: var(--mid-blue);
-            opacity: 0.6;
-        }
-
-        .field input {
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid var(--divider);
-            padding: 10px 0;
-            font-family: 'Jost', sans-serif;
-            font-size: 15px;
-            font-weight: 300;
-            color: var(--navy);
-            outline: none;
-            transition: border-color 0.2s;
-            width: 100%;
-        }
-        .field input::placeholder { color: var(--mid-blue); opacity: 0.3; }
-        .field input:focus { border-bottom-color: var(--accent); }
-
-        #saveNew {
-            width: 100%;
-            margin-top: 20px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 100px;
-            padding: 14px;
-            font-family: 'Jost', sans-serif;
-            font-size: 11px;
-            font-weight: 300;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.15s;
-        }
-        #saveNew:hover { background: var(--mid-blue); transform: translateY(-1px); }
-
-        /* Unknown badge on box */
-        .badge-unknown {
-            display: inline-block;
-            padding: 3px 10px;
-            background: rgba(196,137,74,0.15);
-            border: 1px solid rgba(196,137,74,0.3);
-            border-radius: 100px;
-            font-size: 10px;
-            font-weight: 300;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--orange);
-        }
-
-        .divider-line {
-            width: 100%;
-            height: 1px;
-            background: var(--divider);
-            margin: 4px 0 14px;
-        }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KnownAgain · Live</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100vh;overflow-x:hidden}
+body{background:radial-gradient(ellipse at 50% 28%,#d4e6f4 0%,#c2d6e8 45%,#b4c9de 100%);font-family:'DM Sans',sans-serif;color:#1a2e4a}
+.glass{background:rgba(255,255,255,0.58);backdrop-filter:blur(18px) saturate(1.2);border:1px solid rgba(255,255,255,0.78)}
+.glass-soft{background:rgba(255,255,255,0.38);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.6)}
+.ring{position:fixed;border-radius:50%;left:50%;top:36%;transform:translate(-50%,-50%);pointer-events:none;z-index:0}
+@keyframes breathe{0%,100%{opacity:1;transform:translate(-50%,-50%) scale(1)}50%{opacity:.45;transform:translate(-50%,-50%) scale(1.014)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+@keyframes scan{0%,100%{top:0%}50%{top:88%}}
+@keyframes slideL{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideR{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.anim-breathe{animation:breathe 8s ease-in-out infinite}
+.anim-fadeUp{animation:fadeUp .5s ease both}
+.anim-blink{animation:blink 1.8s ease-in-out infinite}
+.anim-scan{animation:scan 3s ease-in-out infinite}
+.anim-slideL{animation:slideL .4s ease both}
+.anim-slideR{animation:slideR .4s ease both}
+#video,#canvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+#canvas{pointer-events:none}
+.scan-bar{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(96,144,184,.7),transparent);pointer-events:none}
+.info-card{transition:opacity .3s ease,transform .3s ease}
+.info-card.hidden-card{opacity:0;pointer-events:none;transform:scale(.97)}
+.tl-scroll{max-height:170px;overflow-y:auto}
+.tl-scroll::-webkit-scrollbar{width:2px}
+.tl-scroll::-webkit-scrollbar-thumb{background:rgba(96,144,184,.3);border-radius:2px}
+input:focus{outline:none;border-bottom-color:#6090b8!important}
+.nav-bar{position:fixed;top:0;left:0;right:0;z-index:50;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;border-bottom:1px solid rgba(255,255,255,.6)}
+.tri-grid{display:grid;grid-template-columns:270px minmax(0,1fr) 270px;gap:16px;align-items:start;width:100%;max-width:1120px;margin:0 auto}
+@media(max-width:960px){.tri-grid{grid-template-columns:1fr}}
+.sec-lbl{font-size:9px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:rgba(74,111,154,.45);margin-bottom:6px}
+.stat-lbl{font-size:9px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:rgba(74,111,154,.45)}
+.stat-val{font-size:12px;font-weight:600;color:#1a2e4a}
+.card-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#1a2e4a;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-rel{font-size:11px;color:#4a6f9a;font-weight:500;margin-top:2px}
+.italic-q{font-family:'Cormorant Garamond',serif;font-style:italic;color:rgba(26,46,74,.7);font-size:13px;line-height:1.6}
+.avatar{width:44px;height:44px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;flex-shrink:0}
+.btn-navy{background:#1a2e4a;color:#fff;border:none;border-radius:.75rem;padding:.65rem 1rem;font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;width:100%;transition:background .2s,transform .1s;box-shadow:0 2px 8px rgba(26,46,74,.18)}
+.btn-navy:hover{background:#4a6f9a}
+.btn-navy:active{transform:scale(.97)}
+.btn-navy:disabled{opacity:.32;cursor:not-allowed}
+.btn-navy.rec-active{background:#dc2626}
+.btn-navy.rec-active:hover{background:#b91c1c}
+.btn-outline{background:transparent;border:.5px solid rgba(168,192,216,.6);border-radius:.5rem;padding:.45rem .75rem;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#1a2e4a;cursor:pointer;transition:background .15s}
+.btn-outline:hover{background:rgba(255,255,255,.5)}
+.btn-outline.sel{background:rgba(255,255,255,.72)}
+.inp{width:100%;background:transparent;border:none;border-bottom:.5px solid rgba(168,192,216,.5);padding:.375rem 0;font-size:14px;color:#1a2e4a;font-family:'DM Sans',sans-serif}
+.inp::placeholder{color:rgba(74,111,154,.3)}
+.csec{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.4)}
+.csec:last-child{border-bottom:none}
+</style>
 </head>
 <body>
 
-<!-- Background rings (splash motif) -->
-<div class="bg-rings">
-    <div class="ring"></div>
-    <div class="ring"></div>
-    <div class="ring"></div>
-</div>
+<div class="ring anim-breathe" style="width:380px;height:380px;border:1px solid rgba(96,144,184,.12);animation-delay:0s"></div>
+<div class="ring anim-breathe" style="width:700px;height:700px;border:1px solid rgba(96,144,184,.07);animation-delay:.9s"></div>
+<div class="ring anim-breathe" style="width:1100px;height:1100px;border:1px solid rgba(96,144,184,.04);animation-delay:1.8s"></div>
 
-<!-- Nav -->
-<nav>
-    <div class="logo">KnownAgain</div>
-    <button class="nav-btn" onclick="window.location.href='/calendar'">Conversation Calendar</button>
+<nav class="nav-bar glass">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:28px;height:28px;border-radius:50%;background:rgba(26,46,74,.1);border:1px solid rgba(26,46,74,.15);display:flex;align-items:center;justify-content:center">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a2e4a" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </div>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#1a2e4a;letter-spacing:-.02em">KnownAgain</span>
+    <span style="font-size:10px;color:rgba(74,111,154,.5);letter-spacing:.2em;text-transform:uppercase;font-weight:500;margin-left:4px">· Live</span>
+  </div>
+  <button type="button" onclick="window.location.href='/calendar'" class="btn-navy" style="width:auto;padding:.45rem 1.2rem;border-radius:999px;font-size:10px">Calendar</button>
 </nav>
 
-<!-- Page -->
-<div class="page">
+<div style="position:relative;z-index:10;min-height:100vh;padding-top:76px;padding-bottom:40px;padding-left:16px;padding-right:16px;display:flex;flex-direction:column;align-items:center;gap:18px">
 
-    <div class="page-eyebrow">Live Recognition</div>
+  <div class="anim-fadeUp" style="font-size:10px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:rgba(74,111,154,.5)">Live Recognition</div>
 
-    <div class="main-card">
+  <div class="glass-soft anim-fadeUp" style="border-radius:.75rem;padding:.6rem 1.25rem;display:flex;align-items:center;gap:.75rem">
+    <div id="statusDot" class="anim-blink" style="width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0"></div>
+    <span id="statusText" style="font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:#4a6f9a;transition:all .3s">Waiting for visitor…</span>
+  </div>
 
-        <!-- Video -->
-        <div class="video-wrap">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
+  <div class="tri-grid anim-fadeUp" style="animation-delay:.1s">
+
+    <div style="display:flex;flex-direction:column">
+      <div id="leftCard" class="info-card hidden-card anim-slideL">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:10px;padding-right:4px">
+          <span style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:rgba(74,111,154,.4);font-weight:500">Person 1</span>
+          <div style="flex:1;height:1px;background:linear-gradient(to right,transparent,rgba(96,144,184,.3));max-width:56px"></div>
+          <div class="anim-blink" style="width:7px;height:7px;border-radius:50%;background:rgba(96,144,184,.55)"></div>
         </div>
-
-        <!-- Status -->
-        <div class="status-bar">
-            <div class="status-left">
-                <div class="status-dot"></div>
-                <h3 id="status">Waiting…</h3>
+        <div class="glass" style="border-radius:1rem;overflow:hidden;box-shadow:0 4px 20px rgba(26,46,74,.08)">
+          <div style="padding:14px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.5);background:rgba(26,46,74,.04)">
+            <div id="l-avatar" class="avatar" style="background:#dbeafe;color:#1e40af">?</div>
+            <div style="min-width:0">
+              <div id="l-name" class="card-name">—</div>
+              <div id="l-relation" class="card-rel">—</div>
             </div>
-        </div>
-
-        <!-- Info panel -->
-        <div class="panel" id="infoPanel" style="display:none;">
-            <div class="panel-title">Visitor Info</div>
-            <div class="divider-line"></div>
-            <div id="info"></div>
-        </div>
-
-        <!-- Subtitle / typewriter -->
-        <div class="subtitle-panel">
-            <div id="subtitle"></div>
-        </div>
-
-        <!-- Record button -->
-        <button id="recordBtn">Record Conversation</button>
-
-        <!-- Timeline -->
-        <div id="timelinePanel">
-            <div class="panel">
-                <div class="panel-title">Recent Conversations</div>
-                <div class="divider-line"></div>
-                <div id="timelineList"></div>
+          </div>
+          <div class="csec" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><div class="stat-lbl">Last seen</div><div id="l-lastseen" class="stat-val">—</div></div>
+            <div><div class="stat-lbl">Visits</div><div id="l-visits" class="stat-val">—</div></div>
+          </div>
+          <div class="csec">
+            <div class="sec-lbl">Last conversation</div>
+            <div id="l-topic" class="italic-q">No conversations yet.</div>
+          </div>
+          <div class="csec" id="l-txwrap" style="display:none">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <div class="anim-blink" style="width:6px;height:6px;border-radius:50%;background:#ef4444"></div>
+              <div class="sec-lbl" style="margin-bottom:0">Live transcript</div>
             </div>
+            <div id="l-tx" class="italic-q" style="min-height:28px"></div>
+          </div>
+          <div class="csec" id="l-tlwrap">
+            <div class="sec-lbl">Recent visits</div>
+            <div id="l-tl" class="tl-scroll" style="display:flex;flex-direction:column;font-size:11px;color:rgba(26,46,74,.75);line-height:1.6"></div>
+          </div>
+          <div class="csec" id="l-memwrap" style="display:none">
+            <div class="sec-lbl">Memory insight</div>
+            <div id="l-mem" style="font-size:11px;color:rgba(26,46,74,.7);line-height:1.6"></div>
+          </div>
+          <div class="csec">
+            <button type="button" id="l-record" class="btn-navy" onclick="startRecord('left')">
+              <span id="l-rec-label">⏺ Record</span>
+            </button>
+          </div>
         </div>
-
-        <!-- Memory insight -->
-        <div id="memoryPanel">
-            <div class="panel">
-                <div class="panel-title">Memory Insight</div>
-                <div class="divider-line"></div>
-                <div id="memoryContent"></div>
-            </div>
-        </div>
-
-        <!-- Register panel -->
-        <div id="registerPanel">
-            <div class="panel">
-                <div class="panel-title">New Person Detected</div>
-                <div class="divider-line"></div>
-                <div class="register-fields">
-                    <div class="field">
-                        <label>Full Name</label>
-                        <input type="text" id="newName" placeholder="e.g. Priya Sharma" />
-                    </div>
-                    <div class="field">
-                        <label>Relationship</label>
-                        <input type="text" id="newRelation" placeholder="e.g. Daughter, Nurse, Friend" />
-                    </div>
-                </div>
-                <button id="saveNew">Save Person</button>
-            </div>
-        </div>
-
+      </div>
+      <div id="leftEmpty" class="glass-soft" style="border-radius:1rem;padding:2rem 1rem;text-align:center">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:15px;color:rgba(26,46,74,.3);margin-bottom:4px">No visitor yet</div>
+        <div style="font-size:10px;color:rgba(74,111,154,.28)">Person 1 will appear here</div>
+      </div>
     </div>
-</div>
-<div id="sidePanel" style="
-    position: fixed;
-    top: 0;
-    right: -350px;
-    width: 320px;
-    height: 100%;
-    background: white;
-    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
-    padding: 20px;
-    transition: right 0.3s ease;
-    z-index: 999;
-">
 
-    <h3 style="margin-bottom:10px;">Person Info</h3>
-    <div id="sideContent" style="white-space: pre-wrap;"></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="glass" style="border-radius:1rem;overflow:hidden;box-shadow:0 8px 32px rgba(26,46,74,.12);aspect-ratio:4/3;position:relative;min-height:280px">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div class="scan-bar anim-scan" id="scanBar"></div>
+        <div style="position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:8px;border-radius:999px;padding:6px 12px;background:rgba(26,46,74,.52);backdrop-filter:blur(8px)">
+          <div id="camDot" class="anim-blink" style="width:8px;height:8px;border-radius:50%;background:#a78bfa"></div>
+          <span id="camLabel" style="font-size:10px;color:rgba(255,255,255,.9);font-weight:600;letter-spacing:.16em;text-transform:uppercase">Scanning</span>
+        </div>
+      </div>
 
-    <button onclick="closePanel()" style="
-        margin-top:20px;
-        padding:10px;
-        border:none;
-        background:#6090b8;
-        color:white;
-        border-radius:6px;
-        cursor:pointer;
-    ">Close</button>
+      <div id="registerZone" class="glass" style="display:none;border-radius:.75rem;overflow:hidden">
+        <div style="padding:9px 14px;display:flex;align-items:center;gap:7px;border-bottom:1px solid rgba(251,191,36,.3);background:rgba(254,243,199,.6)">
+          <div class="anim-blink" style="width:5px;height:5px;border-radius:50%;background:#f59e0b"></div>
+          <span style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#92400e">New visitor detected</span>
+          <span id="reg-slot-badge" style="margin-left:auto;font-size:8px;color:rgba(146,64,14,.55);text-transform:uppercase;letter-spacing:.1em"></span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+          <div id="regSlotSelector" style="display:none;flex-direction:column;gap:6px">
+            <div class="stat-lbl">Register which person?</div>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn-outline" id="regBtnL" onclick="setRegSide('left')" style="flex:1">Person 1</button>
+              <button type="button" class="btn-outline" id="regBtnR" onclick="setRegSide('right')" style="flex:1">Person 2</button>
+            </div>
+          </div>
+          <input type="hidden" id="reg-side" value=""/>
+          <div>
+            <div class="stat-lbl" style="margin-bottom:6px">Full name</div>
+            <input id="reg-name" class="inp" type="text" placeholder="e.g. Priya Sharma" autocomplete="name"/>
+          </div>
+          <div>
+            <div class="stat-lbl" style="margin-bottom:6px">Relationship</div>
+            <input id="reg-relation" class="inp" type="text" placeholder="e.g. Daughter, Nurse"/>
+          </div>
+          <button type="button" class="btn-navy" onclick="saveRegistration()">Save person</button>
+        </div>
+      </div>
 
+      <div id="emptyMsg" class="glass-soft" style="border-radius:.75rem;padding:1.4rem 1rem;text-align:center">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;color:rgba(26,46,74,.45);margin-bottom:4px">Awaiting visitors</div>
+        <div style="font-size:11px;color:rgba(74,111,154,.4);line-height:1.6">Recognized faces will appear on both sides</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column">
+      <div id="rightCard" class="info-card hidden-card anim-slideR">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-left:4px">
+          <div class="anim-blink" style="width:7px;height:7px;border-radius:50%;background:rgba(96,144,184,.55)"></div>
+          <div style="flex:1;height:1px;background:linear-gradient(to left,transparent,rgba(96,144,184,.3));max-width:56px"></div>
+          <span style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:rgba(74,111,154,.4);font-weight:500">Person 2</span>
+        </div>
+        <div class="glass" style="border-radius:1rem;overflow:hidden;box-shadow:0 4px 20px rgba(26,46,74,.08)">
+          <div style="padding:14px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.5);background:rgba(26,46,74,.04)">
+            <div id="r-avatar" class="avatar" style="background:#fef3c7;color:#92400e">?</div>
+            <div style="min-width:0">
+              <div id="r-name" class="card-name">—</div>
+              <div id="r-relation" class="card-rel">—</div>
+            </div>
+          </div>
+          <div class="csec" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><div class="stat-lbl">Last seen</div><div id="r-lastseen" class="stat-val">—</div></div>
+            <div><div class="stat-lbl">Visits</div><div id="r-visits" class="stat-val">—</div></div>
+          </div>
+          <div class="csec">
+            <div class="sec-lbl">Last conversation</div>
+            <div id="r-topic" class="italic-q">No conversations yet.</div>
+          </div>
+          <div class="csec" id="r-txwrap" style="display:none">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <div class="anim-blink" style="width:6px;height:6px;border-radius:50%;background:#ef4444"></div>
+              <div class="sec-lbl" style="margin-bottom:0">Live transcript</div>
+            </div>
+            <div id="r-tx" class="italic-q" style="min-height:28px"></div>
+          </div>
+          <div class="csec" id="r-tlwrap">
+            <div class="sec-lbl">Recent visits</div>
+            <div id="r-tl" class="tl-scroll" style="display:flex;flex-direction:column;font-size:11px;color:rgba(26,46,74,.75);line-height:1.6"></div>
+          </div>
+          <div class="csec" id="r-memwrap" style="display:none">
+            <div class="sec-lbl">Memory insight</div>
+            <div id="r-mem" style="font-size:11px;color:rgba(26,46,74,.7);line-height:1.6"></div>
+          </div>
+          <div class="csec">
+            <button type="button" id="r-record" class="btn-navy" onclick="startRecord('right')">
+              <span id="r-rec-label">⏺ Record</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="rightEmpty" class="glass-soft" style="border-radius:1rem;padding:2rem 1rem;text-align:center">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:15px;color:rgba(26,46,74,.3);margin-bottom:4px">No visitor yet</div>
+        <div style="font-size:10px;color:rgba(74,111,154,.28)">Person 2 will appear here</div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-
-/* ---------------- DOM ---------------- */
-
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const scanBar = document.getElementById('scanBar');
+const camDot = document.getElementById('camDot');
+const camLabel = document.getElementById('camLabel');
+const statusDot = document.getElementById('statusDot');
+const statusTxt = document.getElementById('statusText');
+const emptyMsg = document.getElementById('emptyMsg');
+const registerZone = document.getElementById('registerZone');
 
-const statusText = document.getElementById('status');
-const infoBox = document.getElementById("info");
-const infoPanel = document.getElementById("infoPanel");
-const subtitleBox = document.getElementById("subtitle");
+let stability = {};
+const STABLE = 3;
+let missStreak = 0;
+const MISS_RESET = 14;
 
-const registerPanel = document.getElementById("registerPanel");
-const saveNewBtn = document.getElementById("saveNew");
-const recordBtn = document.getElementById("recordBtn");
+let activeRecording = null;
+let recording = false;
+let recInstance = null;
+let silTimer = null;
+let lastSpeech = Date.now();
+const SILENCE = 3000;
 
-const timelinePanel = document.getElementById("timelinePanel");
-const timelineList = document.getElementById("timelineList");
-
-const memoryPanel = document.getElementById("memoryPanel");
-const memoryContent = document.getElementById("memoryContent");
-
-let activeVisitor = null;
-let selectedPerson = null;
-let activeUnknownId = null;
-let lastDisplayedTranscript = null;
-let clickableFaces = [];
-
-/* ---------------- CAMERA ---------------- */
+let unknownIds = { left: null, right: null };
+let visitorData = { left: null, right: null };
+let sessionTx = { left: '', right: '' };
+let interimTx = { left: '', right: '' };
+let recordContext = { left: null, right: null };
+let regCurrentSide = null;
 
 navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => {
-    video.srcObject = stream;
-})
-.catch(err => console.error("Camera error:", err));
+  .then(s => { video.srcObject = s; })
+  .catch(e => console.warn('Camera unavailable:', e));
 
 video.onloadedmetadata = () => {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 };
 
-/* ---------------- SEND FRAME ---------------- */
+function reveal(el) {
+  el.style.opacity = '1';
+  el.style.pointerEvents = 'auto';
+  el.classList.remove('hidden-card');
+}
+function conceal(el) {
+  el.style.opacity = '0';
+  el.style.pointerEvents = 'none';
+  el.classList.add('hidden-card');
+}
+function show(el, d) { el.style.display = d || 'block'; }
+function hide(el) { el.style.display = 'none'; }
 
-function captureAndSend() {
-    if (!video.videoWidth) return;
-
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-
-    const tempCtx = tempCanvas.getContext("2d");
-    tempCtx.drawImage(video, 0, 0);
-
-    tempCanvas.toBlob(blob => {
-        const formData = new FormData();
-        formData.append('image', blob, 'snapshot.jpg');
-
-        fetch('/recognize', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => handleResponse(data))
-        .catch(err => console.error(err));
-    }, 'image/jpeg');
+function initials(n) {
+  if (!n || !String(n).trim()) return '?';
+  return n.trim().split(/\s+/).map(w => w[0]).join('').substring(0, 2).toUpperCase();
 }
 
-setInterval(captureAndSend, 400);
+function clearPanel(side) {
+  const p = s => document.getElementById(side[0] + '-' + s);
+  p('avatar').textContent = '?';
+  p('name').textContent = '—';
+  p('relation').textContent = '—';
+  p('lastseen').textContent = '—';
+  p('visits').textContent = '—';
+  p('topic').textContent = 'No conversations yet.';
+  hide(p('txwrap'));
+  hide(p('memwrap'));
+  hide(p('tlwrap'));
+  const tl = p('tl');
+  if (tl) tl.innerHTML = '';
+}
 
-/* ---------------- DRAW BOX ---------------- */
+function populatePanel(side, face) {
+  const p = s => document.getElementById(side[0] + '-' + s);
+  p('avatar').textContent = initials(face.name);
+  p('name').textContent = face.name || '—';
+  p('relation').textContent = face.relationship || '—';
+  p('lastseen').textContent = face.last_seen || '—';
+  p('visits').textContent = (face.conversation_count || 0) + ' visits';
+  const topic = face.last_topic
+    ? (face.last_date ? 'On ' + face.last_date + ': ' + face.last_topic : face.last_topic)
+    : 'No conversations yet.';
+  p('topic').textContent = topic;
 
-function drawCenteredBox(face, color, label, extraText = "") {
+  const liveHere = recording && activeRecording === side;
+  const txCombined = (sessionTx[side] + (liveHere ? interimTx[side] : '')).trim();
+  if (txCombined) {
+    p('tx').textContent = txCombined;
+    show(p('txwrap'));
+  } else hide(p('txwrap'));
 
-    const x = face.box.left;
-    const y = face.box.top;
-    const width = face.box.right - face.box.left;
-    const height = face.box.bottom - face.box.top;
+  if (face.memory_insight) {
+    p('mem').textContent = face.memory_insight;
+    show(p('memwrap'));
+  } else hide(p('memwrap'));
 
-    clickableFaces.push({
-        x, y, width, height, data: face
+  const tl = p('tl');
+  tl.innerHTML = '';
+  if (face.recent_history && face.recent_history.length) {
+    face.recent_history.slice().reverse().forEach(e => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:7px 0;border-bottom:1px solid rgba(255,255,255,.45)';
+      row.innerHTML =
+        '<div style="font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(74,111,154,.45);margin-bottom:2px">' +
+        (e.date || '') + '</div><div>' + (e.summary || '') + '</div>';
+      tl.appendChild(row);
     });
+    show(p('tlwrap'));
+  } else hide(p('tlwrap'));
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x, y, width, height);
-
-    let text = label;
-
-    if (extraText) {
-        text += " • " + extraText.substring(0, 20) + "...";
-    }
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(x, y - 25, 200, 20);
-
-    ctx.fillStyle = "white";
-    ctx.font = "13px Arial";
-    ctx.fillText(text, x + 5, y - 10);
+  const short = face.name ? face.name.split(' ')[0] : 'Person';
+  document.getElementById(side[0] + '-rec-label').textContent = '⏺ Record – ' + short;
 }
 
-/* ---------------- HANDLE RESPONSE ---------------- */
+function drawBox(face, color, label) {
+  if (!face.box || !video.videoWidth) return;
+  const sx = canvas.width / video.videoWidth;
+  const sy = canvas.height / video.videoHeight;
+  const x = face.box.left * sx;
+  const y = face.box.top * sy;
+  const w = (face.box.right - face.box.left) * sx;
+  const h = (face.box.bottom - face.box.top) * sy;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(26,46,74,.65)';
+  const lw = Math.min(220, ctx.measureText(label).width + 14);
+  ctx.fillRect(x, y - 22, lw, 20);
+  ctx.fillStyle = '#fff';
+  ctx.font = '500 12px "DM Sans",sans-serif';
+  ctx.fillText(label, x + 7, y - 8);
+}
+
+function setRegSide(side) {
+  regCurrentSide = side;
+  document.getElementById('reg-side').value = side;
+  document.getElementById('regBtnL').classList.toggle('sel', side === 'left');
+  document.getElementById('regBtnR').classList.toggle('sel', side === 'right');
+}
+
+function updateRegisterZone() {
+  const lU = !!unknownIds.left;
+  const rU = !!unknownIds.right;
+  if (!lU && !rU) {
+    hide(registerZone);
+    return;
+  }
+  show(registerZone);
+  const sel = document.getElementById('regSlotSelector');
+  if (lU && rU) {
+    show(sel, 'flex');
+    sel.style.flexDirection = 'column';
+    if (!regCurrentSide) setRegSide('left');
+  } else {
+    hide(sel);
+    setRegSide(lU ? 'left' : 'right');
+  }
+  document.getElementById('reg-slot-badge').textContent =
+    lU && rU ? 'Two new visitors' : 'One new visitor';
+}
+
+function saveRegistration() {
+  const side = document.getElementById('reg-side').value || regCurrentSide || 'left';
+  const name = document.getElementById('reg-name').value.trim();
+  const rel = document.getElementById('reg-relation').value.trim();
+  const uid = unknownIds[side];
+  if (!name || !rel || !uid) return;
+  fetch('/register-new', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ unknown_id: uid, name: name, relationship: rel })
+  })
+    .then(r => {
+      if (!r.ok) throw new Error('register failed');
+      unknownIds[side] = null;
+      document.getElementById('reg-name').value = '';
+      document.getElementById('reg-relation').value = '';
+      regCurrentSide = null;
+      updateRegisterZone();
+    })
+    .catch(() => {});
+}
+
+function applySoftNonFace(status) {
+  statusDot.style.background = '#94a3b8';
+  camLabel.textContent = 'Scanning';
+  scanBar.style.display = 'block';
+  const map = {
+    no_face: 'No face detected',
+    no_registered_faces: 'Position your face to register',
+    invalid_image: 'Camera frame error',
+    invalid_image_exception: 'Camera frame error'
+  };
+  statusTxt.textContent = map[status] || 'Waiting for visitor…';
+}
 
 function handleResponse(data) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    clickableFaces = [];
-
-    if (data.status !== "faces_detected") return;
-
-    activeVisitor = null;
-    activeUnknownId = null;
-
-    data.faces.forEach(face => {
-
-        // ✅ keep selected person updated
-        if (selectedPerson && face.name === selectedPerson.name) {
-            selectedPerson = face;
-            activeVisitor = face;
-        }
-
-        let color = "lime";
-        let label = face.name;
-
-        if (face.is_patient) {
-            color = "blue";
-            label = "Patient";
-        }
-
-        if (face.is_new_candidate) {
-            color = "orange";
-            label = "Unknown";
-            activeUnknownId = face.unknown_id;
-            registerPanel.style.display = "block";
-        }
-
-        drawCenteredBox(face, color, label, face.last_topic);
-
-        if (!selectedPerson && !activeVisitor && !face.is_new_candidate) {
-            activeVisitor = face;
-        }
-    });
-
-    if (!activeUnknownId) registerPanel.style.display = "none";
-
-    const person = selectedPerson || activeVisitor;
-
-    if (person) {
-
-        statusText.innerText = "Visitor Recognized";
-        infoPanel.style.display = "block";
-        recordBtn.style.display = "block";
-
-        infoBox.innerText =
-            "Name: " + (person.name || "-") +
-            "\nRelationship: " + (person.relationship || "-") +
-            "\nLast seen: " + (person.last_seen || "-") +
-            "\nTotal conversations: " + (person.conversation_count || 0) +
-            "\nLast conversation date: " + (person.last_date || "-");
-
-        if (person.last_topic && person.last_topic !== lastDisplayedTranscript) {
-            subtitleBox.innerText =
-                person.last_date
-                ? "On " + person.last_date + ", you talked about: " + person.last_topic
-                : person.last_topic;
-
-            lastDisplayedTranscript = person.last_topic;
-        }
-
-        renderTimeline(person.recent_history);
-        renderMemoryInsight(person);
-
-    } else if (!selectedPerson) {
-
-        statusText.innerText = "Waiting…";
-        infoPanel.style.display = "none";
-        recordBtn.style.display = "none";
-        subtitleBox.innerText = "";
-        timelinePanel.style.display = "none";
-        memoryPanel.style.display = "none";
-        lastDisplayedTranscript = null;
+  if (data.status !== 'faces_detected' || !Array.isArray(data.faces)) {
+    missStreak++;
+    if (missStreak >= MISS_RESET) {
+      missStreak = 0;
+      setIdle();
+    } else {
+      applySoftNonFace(data.status || 'no_face');
     }
+    return;
+  }
+
+  missStreak = 0;
+  if (data.faces.length === 0) return;
+
+  const currentKeys = [];
+  data.faces.forEach(f => {
+    const k = f.name + (f.is_new_candidate ? '_u' : '_k');
+    currentKeys.push(k);
+    stability[k] = (stability[k] || 0) + 1;
+  });
+  Object.keys(stability).forEach(k => {
+    if (!currentKeys.includes(k)) {
+      stability[k]--;
+      if (stability[k] <= 0) delete stability[k];
+    }
+  });
+
+  const knownFaces = [];
+  const unknownFaces = [];
+  data.faces.forEach(f => {
+    const k = f.name + (f.is_new_candidate ? '_u' : '_k');
+    if (stability[k] < STABLE) return;
+    if (f.is_patient) {
+      drawBox(f, '#60a5fa', 'Patient');
+      return;
+    }
+    if (f.is_new_candidate) unknownFaces.push(f);
+    else knownFaces.push(f);
+  });
+
+  knownFaces.forEach((f, i) => {
+    drawBox(f, ['#34d399', '#a78bfa'][i % 2], f.name + ' · ' + (f.confidence || '') + '%');
+  });
+  unknownFaces.forEach(f => drawBox(f, '#f59e0b', 'Unknown'));
+
+  const totalVisible = knownFaces.length + unknownFaces.length;
+  if (totalVisible === 0) {
+    statusTxt.textContent = 'Hold steady…';
+    statusDot.style.background = '#94a3b8';
+    camLabel.textContent = 'Calibrating';
+    return;
+  }
+
+  hide(emptyMsg);
+  scanBar.style.display = 'none';
+  camDot.style.background = '#34d399';
+  camLabel.textContent = totalVisible === 1 ? '1 face' : totalVisible + ' faces';
+
+  if (knownFaces.length && unknownFaces.length) {
+    statusDot.style.background = '#a78bfa';
+    statusTxt.textContent = 'Known + new visitor';
+  } else if (unknownFaces.length && !knownFaces.length) {
+    statusDot.style.background = '#f59e0b';
+    statusTxt.textContent =
+      unknownFaces.length > 1 ? 'New visitors — register below' : 'New visitor — register below';
+  } else {
+    statusDot.style.background = '#34d399';
+    statusTxt.textContent =
+      knownFaces.length === 1 ? 'Visitor recognized' : 'Visitors recognized';
+  }
+
+  const slots = ['left', 'right'];
+  slots.forEach(s => {
+    clearPanel(s);
+    conceal(document.getElementById(s + 'Card'));
+    show(document.getElementById(s + 'Empty'));
+    visitorData[s] = null;
+    unknownIds[s] = null;
+  });
+
+  knownFaces.slice(0, 2).forEach((f, i) => {
+    const side = slots[i];
+    visitorData[side] = f;
+    populatePanel(side, f);
+    reveal(document.getElementById(side + 'Card'));
+    hide(document.getElementById(side + 'Empty'));
+  });
+
+  const uIdx = knownFaces.length;
+  unknownFaces.slice(0, 2 - knownFaces.length).forEach((f, i) => {
+    unknownIds[slots[uIdx + i]] = f.unknown_id;
+  });
+
+  updateRegisterZone();
 }
 
-/* ---------------- CLICK ---------------- */
-
-canvas.addEventListener("click", function(event) {
-
-    const rect = canvas.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
-
-    let clicked = false;
-
-    clickableFaces.forEach(faceObj => {
-
-        const { x, y, width, height, data } = faceObj;
-
-        if (
-            clickX >= x &&
-            clickX <= x + width &&
-            clickY >= y &&
-            clickY <= y + height
-        ) {
-            selectedPerson = data;
-openPanel(data);   // 🔥 NEW
-clicked = true;
-        }
-    });
-
-    if (!clicked) {
-        selectedPerson = null;
-    }
-});
-
-/* ---------------- TIMELINE ---------------- */
-
-function renderTimeline(history) {
-
-    if (!history || history.length === 0) {
-        timelinePanel.style.display = "none";
-        return;
-    }
-
-    timelinePanel.style.display = "block";
-    timelineList.innerHTML = "";
-
-    history.slice().reverse().forEach(entry => {
-
-        const div = document.createElement("div");
-        div.className = "timeline-entry";
-        div.innerText = entry.summary;
-        timelineList.appendChild(div);
-    });
+function setIdle() {
+  missStreak = 0;
+  stability = {};
+  show(emptyMsg);
+  scanBar.style.display = 'block';
+  camDot.style.background = '#a78bfa';
+  camLabel.textContent = 'Scanning';
+  statusTxt.textContent = 'Waiting for visitor…';
+  statusDot.style.background = '#94a3b8';
+  ['left', 'right'].forEach(side => {
+    clearPanel(side);
+    conceal(document.getElementById(side + 'Card'));
+    show(document.getElementById(side + 'Empty'));
+    visitorData[side] = null;
+    unknownIds[side] = null;
+    sessionTx[side] = '';
+  });
+  hide(registerZone);
 }
 
-/* ---------------- MEMORY ---------------- */
+function captureAndSend() {
+  if (!video.videoWidth) return;
+  requestAnimationFrame(() => {
+    const t = document.createElement('canvas');
+    t.width = video.videoWidth;
+    t.height = video.videoHeight;
+    t.getContext('2d').drawImage(video, 0, 0);
+    t.toBlob(
+      blob => {
+        if (!blob) return;
+        const fd = new FormData();
+        fd.append('image', blob, 'snap.jpg');
+        fetch('/recognize', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(handleResponse)
+          .catch(() => {});
+      },
+      'image/jpeg',
+      0.92
+    );
+  });
+}
+setInterval(captureAndSend, 400);
 
-function renderMemoryInsight(visitor) {
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (!visitor.memory_insight) {
-        memoryPanel.style.display = "none";
-        return;
-    }
+function startRecord(side) {
+  if (!SR) {
+    alert('Speech recognition is not supported in this browser.');
+    return;
+  }
+  if (!visitorData[side]) return;
 
-    memoryPanel.style.display = "block";
-    memoryContent.innerText = visitor.memory_insight;
+  if (recording && activeRecording === side) {
+    stopRecord();
+    return;
+  }
+  if (recording) stopRecord();
+
+  sessionTx[side] = '';
+  interimTx[side] = '';
+  recordContext[side] = visitorData[side]
+    ? { name: visitorData[side].name }
+    : null;
+
+  if (!recInstance) {
+    recInstance = new SR();
+    recInstance.continuous = true;
+    recInstance.interimResults = true;
+    recInstance.lang = 'en-US';
+    recInstance.maxAlternatives = 1;
+    recInstance.onresult = e => {
+      lastSpeech = Date.now();
+      const ar = activeRecording;
+      if (!ar) return;
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const seg = e.results[i];
+        if (seg.isFinal) sessionTx[ar] += seg[0].transcript + ' ';
+      }
+      let interim = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (!e.results[i].isFinal) interim += e.results[i][0].transcript;
+      }
+      interimTx[ar] = interim;
+      const line = (sessionTx[ar] + interimTx[ar]).trim();
+      const txEl = document.getElementById(ar[0] + '-tx');
+      const wrap = document.getElementById(ar[0] + '-txwrap');
+      if (txEl) txEl.textContent = line || '…';
+      if (wrap) show(wrap);
+    };
+    recInstance.onerror = ev => {
+      if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+      stopRecord();
+    };
+    recInstance.onend = () => {
+      if (recording) {
+        setTimeout(() => {
+          if (!recording || !recInstance) return;
+          try {
+            recInstance.start();
+          } catch (err) {}
+        }, 120);
+      }
+    };
+  }
+
+  activeRecording = side;
+  recording = true;
+  try {
+    recInstance.start();
+  } catch (e) {
+    recording = false;
+    activeRecording = null;
+    recordContext[side] = null;
+    alert('Could not start microphone. Allow mic access and try again.');
+    return;
+  }
+
+  document.getElementById(side[0] + '-record').classList.add('rec-active');
+  document.getElementById(side[0] + '-rec-label').textContent = '⏹ Stop recording';
+  lastSpeech = Date.now();
+  silTimer = setInterval(() => {
+    if (Date.now() - lastSpeech > SILENCE) stopRecord();
+  }, 1000);
 }
 
-/* ---------------- REGISTER ---------------- */
+function stopRecord() {
+  if (!recording) return;
+  recording = false;
+  try {
+    if (recInstance) recInstance.stop();
+  } catch (e) {}
+  clearInterval(silTimer);
 
-saveNewBtn.onclick = () => {
+  const side = activeRecording;
+  activeRecording = null;
+  if (!side) return;
 
-    const name = document.getElementById("newName").value;
-    const relationship = document.getElementById("newRelation").value;
+  const btn = document.getElementById(side[0] + '-record');
+  if (btn) btn.classList.remove('rec-active');
+  const nm =
+    visitorData[side] && visitorData[side].name
+      ? visitorData[side].name.split(' ')[0]
+      : 'Person';
+  const recLabel = document.getElementById(side[0] + '-rec-label');
+  if (recLabel) recLabel.textContent = '⏺ Record – ' + nm;
 
-    if (!name || !relationship || !activeUnknownId) return;
+  const note = (sessionTx[side] + ' ' + interimTx[side]).trim();
+  const name =
+    (recordContext[side] && recordContext[side].name) ||
+    (visitorData[side] && visitorData[side].name);
 
-    fetch('/register-new', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            unknown_id: activeUnknownId,
-            name,
-            relationship
-        })
-    }).then(() => {
-        registerPanel.style.display = "none";
-        document.getElementById("newName").value = "";
-        document.getElementById("newRelation").value = "";
-    });
-};
-function openPanel(person) {
+  if (note && name) {
+    fetch('/add-note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, note: note })
+    })
+      .then(r => {
+        if (!r.ok) throw new Error('add-note failed');
+      })
+      .catch(() => {});
+  }
 
-    const panel = document.getElementById("sidePanel");
-    const content = document.getElementById("sideContent");
-
-    content.innerText =
-        "Name: " + (person.name || "-") +
-        "\nRelationship: " + (person.relationship || "-") +
-        "\nLast seen: " + (person.last_seen || "-") +
-        "\nTotal conversations: " + (person.conversation_count || 0) +
-        "\nLast topic: " + (person.last_topic || "-");
-
-    panel.style.right = "0";
+  sessionTx[side] = '';
+  interimTx[side] = '';
+  recordContext[side] = null;
 }
-
-function closePanel() {
-    document.getElementById("sidePanel").style.right = "-350px";
-}
-    document.addEventListener("click", function(e) {
-    if (!e.target.closest("#sidePanel") && !e.target.closest("canvas")) {
-        closePanel();
-    }
-});
 </script>
 </body>
 </html>

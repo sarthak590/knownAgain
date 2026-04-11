@@ -235,7 +235,28 @@ def register_new():
     result = register_new_face(unknown_id, name, relationship)
     return jsonify(result)
 
+@app.route('/reset-history', methods=['GET'])
+def reset_history():
+    try:
+        with open(ENCODINGS_FILE, "rb") as f:
+            people = pickle.load(f)
 
+        for person in people:
+            person["history"] = []
+            person["last_topic"] = None
+            person["last_date"] = None
+            person["conversation_count"] = 0
+            person["memory_insight"] = None
+            person["memory_confidence"] = 0
+            person["top_keywords"] = []
+
+        with open(ENCODINGS_FILE, "wb") as f:
+            pickle.dump(people, f)
+
+        return "All conversations cleared (faces remain)"
+
+    except Exception as e:
+        return str(e), 500
 # ---------------------------------------------------
 
 if __name__ == "__main__":
