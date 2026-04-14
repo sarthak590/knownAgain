@@ -92,11 +92,14 @@ def extract_top_keywords_from_history(history, limit=5):
 # ---------------------------------------------------
 # 🔵 ROUTES
 # ---------------------------------------------------
-
 @app.route('/')
+def splash():
+    return render_template("splash.html")
+@app.route('/')
+
+@app.route('/home')
 def home():
     return render_template("index.html")
-
 
 # ---------------------------------------------------
 # 🔵 Face Recognition
@@ -257,6 +260,8 @@ def reset_history():
 
     except Exception as e:
         return str(e), 500
+
+
 # ---------------------------------------------------
 
 if __name__ == "__main__":
